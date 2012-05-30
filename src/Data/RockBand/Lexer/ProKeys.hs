@@ -23,40 +23,34 @@ data Point
   deriving (Eq, Ord, Show)
 
 data Duration
-  -- | A keyboard solo section.
-  = Solo
-  -- | Place over a sequence of white notes to make invisible fill lanes.
-  | Glissando
-  -- | Fill lanes between two keys.
-  | Trill
-  -- | Overdrive energy phrase.
-  | Overdrive
-  -- | The fill lanes for a Big Rock Ending.
-  | BRE
-  -- | Only pitches within the range of 48 and 72 are permitted.
-  | Note V.Pitch
+  = Solo -- ^ A keyboard solo section.
+  | Glissando -- ^ Place over a sequence of white notes for a freeform section.
+  | Trill -- ^ Fill lanes on two keys.
+  | Overdrive -- ^ An energy phrase.
+  | BRE -- ^ Fill lanes for a Big Rock Ending.
+  | Note V.Pitch -- ^ Valid pitches are in MIDI range 48 to 72.
   deriving (Eq, Ord, Show)
 
-{- | There are six playable ranges, each of which covers 10 white keys, plus
-     all the black keys within. They are named here according to their lowest
-     key. -}
+-- | There are six playable ranges, each of which covers 10 white keys, plus
+-- all the black keys within. They are named here according to their lowest key.
 data LaneRange = C | D | E | F | G | A
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-readEvent :: MIDI.Event Bool -> Maybe [Event Bool]
-readEvent (Duration (MIDI.Note _ p _) b) = case V.fromPitch p of
-  0 -> Just [Point $ LaneShift C | b]
-  2 -> Just [Point $ LaneShift D | b]
-  4 -> Just [Point $ LaneShift E | b]
-  5 -> Just [Point $ LaneShift F | b]
-  7 -> Just [Point $ LaneShift G | b]
-  9 -> Just [Point $ LaneShift A | b]
-  i | 48 <= i && i <= 72 -> Just [Duration (Note p) b]
-  115 -> Just [Duration Solo b]
-  116 -> Just [Duration Overdrive b]
-  120 -> Just [Duration BRE b]
-  126 -> Just [Duration Glissando b]
-  127 -> Just [Duration Trill b]
+-- | Designed only for duration format, not switch format.
+readEvent :: MIDI.Event dur -> Maybe [Event dur]
+readEvent (Duration (MIDI.Note _ p _) len) = case V.fromPitch p of
+  0 -> Just [Point $ LaneShift C]
+  2 -> Just [Point $ LaneShift D]
+  4 -> Just [Point $ LaneShift E]
+  5 -> Just [Point $ LaneShift F]
+  7 -> Just [Point $ LaneShift G]
+  9 -> Just [Point $ LaneShift A]
+  i | 48 <= i && i <= 72 -> Just [Duration (Note p) len]
+  115 -> Just [Duration Solo len]
+  116 -> Just [Duration Overdrive len]
+  120 -> Just [Duration BRE len]
+  126 -> Just [Duration Glissando len]
+  127 -> Just [Duration Trill len]
   _ -> Nothing
 readEvent (Point (MIDI.TextEvent str)) = case str of
   (readMood -> Just m) -> Just [Point $ Mood m]

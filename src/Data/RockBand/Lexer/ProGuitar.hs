@@ -1,6 +1,6 @@
 {-# LANGUAGE ViewPatterns #-}
-{- | The contents of the \"PART REAL_GUITAR\", \"PART REAL_GUITAR_22\",
-     \"PART REAL_BASS\", and \"PART REAL_BASS_22\" tracks. -}
+-- | The contents of the \"PART REAL_GUITAR\", \"PART REAL_GUITAR_22\",
+-- \"PART REAL_BASS\", and \"PART REAL_BASS_22\" tracks.
 module Data.RockBand.Lexer.ProGuitar where
 
 import Data.RockBand.Common
@@ -63,10 +63,12 @@ data SlideType
   | ReversedSlide
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-readEvent :: MIDI.Event Bool -> Maybe [Event Bool]
-readEvent (Duration (MIDI.Note ch p vel) b) = case V.fromPitch p of
-  126 -> Just [Duration Tremolo b]
-  127 -> Just [Duration Trill b]
+-- | Designed only for duration format, not switch format.
+readEvent :: MIDI.Event dur -> Maybe [Event dur]
+readEvent (Duration (MIDI.Note ch p vel) len) = case V.fromPitch p of
+  -- TODO
+  126 -> Just [Duration Tremolo len]
+  127 -> Just [Duration Trill len]
   _ -> Nothing
 readEvent (Point (MIDI.TextEvent str)) = case str of
   (stripPrefix "[begin_pg song_trainer_pg_" -> Just (reads -> [(n, "]")]))

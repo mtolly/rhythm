@@ -40,16 +40,17 @@ data PercussionType
   | Clap
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-readEvent :: MIDI.Event Bool -> Maybe [Event Bool]
-readEvent (Duration (MIDI.Note _ p _) b) = case V.fromPitch p of
-  0 -> Just [Duration RangeShift b]
-  1 -> Just [Point LyricShift | b]
-  i | 36 <= i && i <= 84 -> Just [Duration (Note p) b]
-  96 -> Just [Point Percussion | b]
-  97 -> Just [Point PercussionSound | b]
-  105 -> Just [Duration Phrase b]
-  106 -> Just [Duration Phrase2 b]
-  116 -> Just [Point Overdrive | b]
+-- | Designed only for duration format, not switch format.
+readEvent :: MIDI.Event dur -> Maybe [Event dur]
+readEvent (Duration (MIDI.Note _ p _) len) = case V.fromPitch p of
+  0 -> Just [Duration RangeShift len]
+  1 -> Just [Point LyricShift]
+  i | 36 <= i && i <= 84 -> Just [Duration (Note p) len]
+  96 -> Just [Point Percussion]
+  97 -> Just [Point PercussionSound]
+  105 -> Just [Duration Phrase len]
+  106 -> Just [Duration Phrase2 len]
+  116 -> Just [Point Overdrive]
   _ -> Nothing
 readEvent (Point (MIDI.Lyric str)) = Just [Point $ Lyric str]
 readEvent (Point (MIDI.TextEvent str)) = case str of

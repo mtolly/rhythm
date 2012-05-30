@@ -69,6 +69,8 @@ data StrumMap
   | SlapBass
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
+-- | Works with both switch and duration format; a 'Duration' always maps to a
+-- 'Duration' and a 'Point' always maps to a 'Point'.
 readEvent :: MIDI.Event a -> Maybe [Event a]
 readEvent (Duration (MIDI.Note _ p _) b) = case V.fromPitch p of
   i | 40 <= i && i <= 59 -> Just [Duration (AtFret (GtrFret $ i - 40)) b]

@@ -8,29 +8,20 @@ import qualified Data.RockBand.Lexer.MIDI as MIDI
 import Data.MusicTime
 import Data.List (stripPrefix)
 
-{- | All the events in the \"PART DRUMS\" track, which contain all the drum
-     notes, as well as the drummer's animations. -}
+-- | Any event in the \"PART DRUMS\" track, which includes all the drum track
+-- notes/modifiers as well as the animation events for the drummer character.
 type Event = TimeEvent Duration Point
 
 data Duration
-  -- | Change 'Yellow', 'Blue', and 'Green' cymbals to toms.
-  = Toms Drum
-  -- | An overdrive phrase which fills 1/4 of the player's energy bar.
-  | Overdrive
-  -- | Drum fill lanes for Overdrive activation, as well as Big Rock Endings.
-  | Activation
-  -- | A drum solo section. You can't have activation fills during a solo.
-  | Solo
-  -- | A \"standard\" fill lane, for one tom or cymbal pad (not kick).
-  | SingleRoll
-  -- | A \"special\" fill lane, for two pads.
-  | DoubleRoll
-  -- | Used pre-RB3 for Tug of War mode.
-  | Player1
-  -- | Used pre-RB3 for Tug of War mode.
-  | Player2
-  -- | An animation event that causes the drummer's hihat to be up (open).
-  | HihatOpen
+  = Toms Drum -- ^ Change 'Yellow', 'Blue', and 'Green' cymbal notes to toms.
+  | Overdrive -- ^ The phrase which fills the player's energy bar.
+  | Activation -- ^ Fill lanes for Overdrive activation and Big Rock Endings.
+  | Solo -- ^ A drum solo section.
+  | SingleRoll -- ^ \"Standard\" drum roll lane on one pad.
+  | DoubleRoll -- ^ \"Special\" drum roll lane on two pads.
+  | Player1 -- ^ Used pre-RB3 for Tug of War mode.
+  | Player2 -- ^ Used pre-RB3 for Tug of War mode.
+  | HihatOpen -- ^ Animation event that raises (opens) the hihat pedal.
   deriving (Eq, Ord, Show, Read)
 
 data Point
@@ -40,15 +31,12 @@ data Point
   deriving (Eq, Ord, Show, Read)
 
 data DiffEvent
-  -- | Changes the drum audio & discobeat settings.
-  = Mix Audio Disco
-  {- | A drum note, for a certain difficulty. Use 'Toms' events to select
-       between tom and cymbal notes. -}
-  | Note Drum
+  = Mix Audio Disco -- ^ Set the drum audio & pad layout.
+  | Note Drum -- ^ A drum track gem.
   deriving (Eq, Ord, Show, Read)
 
-{- | The five note types in Basic Drums. To select between toms and cymbals
-     for Pro Drums, use 'Toms' events. -}
+-- | The five note types in Basic Drums. To select between toms and cymbals for
+-- Pro Drums, use 'Toms' events.
 data Drum
   = Kick
   | Red
@@ -68,43 +56,28 @@ data Audio
 
 -- | Special options that can affect drum audio and pad settings.
 data Disco
-  -- | All pads are normal.
-  = NoDisco
-  -- | Yellow pad is snare, red pad is hihat. When playing Pro Drums, these are
-  -- then switched back, so red is snare and yellow cymbal is hihat.
-  | Disco
-  -- | New in RB3. Used for snare beats where accented hits are 'Yellow'.
-  | DiscoNoFlip
-  -- | Pre-RB3. Used for 'Easy' sections with no \"kit\" notes, only
-  -- 'Red' and 'Kick'.
-  | EasyMix
-  -- | Pre-RB3. Used for 'Easy' sections with no 'Kick' notes, only 'Red' and
-  -- \"kit\".
-  | EasyNoKick
+  = NoDisco -- ^ All pads are normal.
+  | Disco -- ^ Yellow snare, red hihat. \"Undone\" by Pro Drums.
+  | DiscoNoFlip -- ^ New in RB3: snare beats where accented hits are 'Yellow'.
+  | EasyMix -- ^ Pre-RB3. 'Easy' sections with only 'Red' and 'Kick' notes.
+  | EasyNoKick -- ^ Pre-RB3. 'Easy' sections with no 'Kick' notes.
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 -- | Animation events for the drummer. Most are self-explanatory.
 data Animation
-  -- | The highest-pitch tom.
-  = Tom1 Hand
-  -- | The middle tom.
-  | Tom2 Hand
-  -- | The lowest-pitch tom.
-  | FloorTom Hand
-  -- | HihatOpen is a duration event, so it will come before Hihat.
+  = Tom1 Hand -- ^ The high tom.
+  | Tom2 Hand -- ^ The middle tom.
+  | FloorTom Hand -- ^ The low tom.
   | Hihat Hand
   | Snare Hit Hand
   | Ride Hand
-  -- | The left crash, closer to the hihat.
-  | Crash1 Hit Hand
-  -- | The right crash, closer to the ride.
-  | Crash2 Hit Hand
+  | Crash1 Hit Hand -- ^ The left crash, closer to the hihat.
+  | Crash2 Hit Hand -- ^ The right crash, closer to the ride.
   | KickRF
   | Crash1RHChokeLH
   | Crash2RHChokeLH
   | PercussionRH
-  -- | When 'True', slow 'Ride' hits will have a special animation style.
-  | RideSide Bool
+  | RideSide Bool -- ^ Causes slow 'Ride' hits to animate differently.
   deriving (Eq, Ord, Show, Read)
 
 -- | Used in 'Animation' events to show accented or ghost notes.
@@ -114,6 +87,7 @@ data Hit = SoftHit | HardHit
 data Hand = LH | RH
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
+-- | Designed only for duration format, not switch format.
 readEvent :: MIDI.Event dur -> Maybe [Event dur]
 readEvent (Duration (MIDI.Note _ p _) len) = case V.fromPitch p of
 
@@ -206,7 +180,7 @@ readMix str
     "easynokick]" -> Just EasyNoKick
     _ -> Nothing
   | otherwise = Nothing
-  -- Hell yeah pattern guards
+  -- Pattern guards: they're pretty cool
 
 showEvent :: Event Beats -> [MIDI.Event Beats]
 showEvent (Point p) = case p of

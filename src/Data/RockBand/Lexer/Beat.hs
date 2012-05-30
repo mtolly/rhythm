@@ -12,9 +12,10 @@ data Event
   | Beat
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-readEvent :: MIDI.Event Bool -> Maybe [Event]
-readEvent (Duration (MIDI.Note _ p _) b) = case V.fromPitch p of
-  12 -> Just [Bar | b]
-  13 -> Just [Beat | b]
+-- | Designed only for duration format, not switch format.
+readEvent :: MIDI.Event dur -> Maybe [Event]
+readEvent (Duration (MIDI.Note _ p _) _) = case V.fromPitch p of
+  12 -> Just [Bar]
+  13 -> Just [Beat]
   _  -> Nothing
 readEvent _ = Nothing
