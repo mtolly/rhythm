@@ -13,23 +13,18 @@ import qualified Data.EventList.Relative.TimeBody as RTB
 type Fret = NN.Integer
 type SwitchType = NN.Integer
 
--- | FeedBack .chart files use four basic data types.
 data Value
-  -- | Non-negative integer literals, like 0, 8, or 123
-  = VInt NN.Integer
-  -- | Floating point literals, like 0.0, 5.42, or -6789.1234
-  | VReal Rational
-  -- | Quoted strings, like \"hello,\\nworld!\" or \"My Song\"
-  | VQuoted String
-  -- | Raw identifiers, like TS, rhythm, or Song
-  | VIdent String
+  = Int NN.Integer -- ^ Non-negative integer literals, like 0, 8, or 123
+  | Real Rational -- ^ Floating point literals, like 0.0, 5.42, or -6789.1234
+  | Quoted String -- ^ Quoted strings, like \"hello,\\nworld!\" or \"My Song\"
+  | Ident String -- ^ Raw identifiers, like TS, rhythm, or Song
   deriving (Eq, Ord, Show)
 
 showValue :: Value -> String
-showValue (VInt i) = show i
-showValue (VReal r) = show (fromRational r :: Double)
-showValue (VQuoted s) = show s
-showValue (VIdent s) = s
+showValue (Int i) = show i
+showValue (Real r) = show (fromRational r :: Double)
+showValue (Quoted s) = show s
+showValue (Ident s) = s
 
 type RawChunk = [(Value, [Value])]
 type SongChunk = [(String, Value)]
@@ -57,33 +52,34 @@ data Point
   deriving (Eq, Ord, Show)
 
 readEvent :: [Value] -> Maybe (Event Ticks)
-readEvent (VIdent i : rest) = case (i, rest) of
-  ("B", [VInt b]) -> Just $ Point $ BPM $ fromIntegral b / 1000
-  ("A", [VInt a]) -> Just $ Point $ Anchor $ fromIntegral a / 1000000
-  ("TS", [VInt ts]) -> Just $ Point $ TSig ts
-  ("E", [VQuoted e]) -> Just $ Point $ EventGlobal e
-  ("E", [VIdent e]) -> Just $ Point $ EventLocal e
-  ("N", [VInt f, VInt d]) -> Just $ Duration (Note f) $ fromIntegral d
-  ("S", [VInt t, VInt d]) -> Just $ Duration (Switch t) $ fromIntegral d
+readEvent (Ident i : rest) = case (i, rest) of
+  ("B", [Int b]) -> Just $ Point $ BPM $ fromIntegral b / 1000
+  ("A", [Int a]) -> Just $ Point $ Anchor $ fromIntegral a / 1000000
+  ("TS", [Int ts]) -> Just $ Point $ TSig ts
+  ("E", [Quoted e]) -> Just $ Point $ EventGlobal e
+  ("E", [Ident e]) -> Just $ Point $ EventLocal e
+  ("N", [Int f, Int d]) -> Just $ Duration (Note f) $ fromIntegral d
+  ("S", [Int t, Int d]) -> Just $ Duration (Switch t) $ fromIntegral d
   _ -> Nothing
 readEvent _ = Nothing
 
 showEvent :: Event Ticks -> [Value]
 showEvent e = case e of
   Point p -> case p of
-    BPM b -> [VIdent "B", VInt $ floor $ b * 1000]
-    Anchor a -> [VIdent "A", VInt $ floor $ a * 1000000]
-    TSig ts -> [VIdent "TS", VInt ts]
-    EventGlobal str -> [VIdent "E", VQuoted str]
-    EventLocal str -> [VIdent "E", VIdent str]
+    BPM b -> [Ident "B", Int $ floor $ b * 1000]
+    Anchor a -> [Ident "A", Int $ floor $ a * 1000000]
+    TSig ts -> [Ident "TS", Int ts]
+    EventGlobal str -> [Ident "E", Quoted str]
+    EventLocal str -> [Ident "E", Ident str]
   Duration d tks -> case d of
-    Note f -> [VIdent "N", VInt f, VInt $ fromIntegral tks]
-    Switch t -> [VIdent "S", VInt t, VInt $ fromIntegral tks]
+    Note f -> [Ident "N", Int f, Int $ fromIntegral tks]
+    Switch t -> [Ident "S", Int t, Int $ fromIntegral tks]
 
 showChunk :: String -> RawChunk -> String
-showChunk name evs = "[" ++ name ++ "]\n"
-  ++ "{\n"
-  ++ concatMap showLine evs
-  ++ "}\n" where
-  showLine (lv, rvs) =
-    "  " ++ showValue lv ++ " = " ++ unwords (map showValue rvs) ++ "\n"
+showChunk name evs = concat
+  [ "[", name, "]\n"
+  , "{\n"
+  , concatMap showLine evs
+  , "}\n" ] where
+  showLine (lv, rvs) = concat
+    ["  ", showValue lv, " = ", unwords (map showValue rvs), "\n"]
