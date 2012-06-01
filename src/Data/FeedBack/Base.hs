@@ -9,6 +9,8 @@ module Data.FeedBack.Base where
 import Data.MusicTime
 import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
+import qualified Data.EventList.Absolute.TimeBody as ATB
+import Control.Applicative
 
 type Fret = NN.Integer
 type SwitchType = NN.Integer
@@ -19,12 +21,6 @@ data Value
   | Quoted String -- ^ Quoted strings, like \"hello,\\nworld!\" or \"My Song\"
   | Ident String -- ^ Raw identifiers, like TS, rhythm, or Song
   deriving (Eq, Ord, Show)
-
-showValue :: Value -> String
-showValue (Int i) = show i
-showValue (Real r) = show (fromRational r :: Double)
-showValue (Quoted s) = show s
-showValue (Ident s) = s
 
 type RawChunk = [(Value, [Value])]
 type SongChunk = [(String, Value)]
@@ -51,6 +47,16 @@ data Point
   | EventLocal String
   deriving (Eq, Ord, Show)
 
+-- | Reads a chunk that represents a timeline of events. On error (Left),
+-- returns the offending line that could not be processed as "num = event".
+readTimeChunk :: RawChunk -> Either (Value, [Value]) (TimeChunk Ticks)
+readTimeChunk raw =
+  RTB.fromAbsoluteEventList . ATB.fromPairList <$> mapM getPair raw where
+    getPair :: (Value, [Value]) -> Either (Value, [Value]) (Ticks, Event Ticks)
+    getPair p@(lval, rval) = case (lval, readEvent rval) of
+      (Int tks, Just evt) -> Right (tks, evt)
+      _ -> Left p
+
 readEvent :: [Value] -> Maybe (Event Ticks)
 readEvent (Ident i : rest) = case (i, rest) of
   ("B", [Int b]) -> Just $ Point $ BPM $ fromIntegral b / 1000
@@ -74,12 +80,3 @@ showEvent e = case e of
   Duration d tks -> case d of
     Note f -> [Ident "N", Int f, Int $ fromIntegral tks]
     Switch t -> [Ident "S", Int t, Int $ fromIntegral tks]
-
-showChunk :: String -> RawChunk -> String
-showChunk name evs = concat
-  [ "[", name, "]\n"
-  , "{\n"
-  , concatMap showLine evs
-  , "}\n" ] where
-  showLine (lv, rvs) = concat
-    ["  ", showValue lv, " = ", unwords (map showValue rvs), "\n"]

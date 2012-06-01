@@ -15,6 +15,7 @@ Exposed-modules:    Data.MusicTime
 
                     Data.FeedBack.Base
                     Data.FeedBack.Parsec
+                    Data.FeedBack.Show
 
                     Data.RockBand.Common
 

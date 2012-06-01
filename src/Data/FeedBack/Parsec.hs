@@ -18,8 +18,7 @@ conseq ms = liftM concat $ sequence ms
 -- | Parses the sign character (if one exists) at the beginning of a number,
 -- returning either -1 or +1.
 pSign :: Parser NN.Integer
-pSign = (char '-' >> return (-1))
-  <|> (optional (char '+') >> return 1)
+pSign = (char '-' >> return (-1)) <|> (optional (char '+') >> return 1)
 
 -- | Parses a non-negative integer, a simple string of decimal digits.
 pInt :: Parser NN.Integer
