@@ -9,6 +9,7 @@ module Data.FeedBack.Base where
 import Data.MusicTime
 import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
+import Data.Maybe (listToMaybe)
 
 data Value
   = Int NN.Integer -- ^ Non-negative integer literals, like 0, 8, or 123
@@ -43,3 +44,6 @@ data Point
   | EventGlobal String
   | EventLocal String
   deriving (Eq, Ord, Show)
+
+getResolution :: File a -> Maybe Resolution
+getResolution f = listToMaybe [res | ("Resolution", Int res) <- songChunk f]

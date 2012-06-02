@@ -101,5 +101,5 @@ padToPitch p = V.toPitch $ case p of
   GreenCymbal -> 49
 
 -- | Converts each pad hit to a 128th note (1/32 of a beat) MIDI drum note.
-toMIDI :: BeatTrack Pad -> BeatTrack' MIDI.Event
+toMIDI :: RTB.T Beats Pad -> RTB.T Beats (MIDI.Event Beats)
 toMIDI = RTB.mapBody (MIDI.blip . padToPitch)

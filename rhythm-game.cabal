@@ -8,8 +8,7 @@ Maintainer:         tolly@wisc.edu
 Build-Type:         Simple
 hs-source-dirs:     src
 ghc-options:        -Wall
-Build-Depends:      base, non-negative, event-list, midi, transformers, array,
-                    parsec
+Build-Depends:      base, non-negative, event-list, midi, transformers, array
 
 Exposed-modules:    Data.MusicTime
 
