@@ -5,8 +5,7 @@ module Data.FeedBack.Lex (scan, Token(..), AlexPosn(..)) where
 
 import qualified Numeric.NonNegative.Wrapper as NN
 import Data.FeedBack.Base
-import Text.ParserCombinators.ReadP
-import qualified Text.Read.Lex as Lexeme
+import Numeric
 }
 
 %wrapper "posn"
@@ -71,10 +70,8 @@ scan :: String -> [(AlexPosn, Token)]
 scan = alexScanTokens
 
 decRational :: String -> Rational
-decRational str = case readP_to_S Lexeme.lex str of
-  [(Lexeme.Symbol "-", rest)] -> negate $ decRational rest
-  [(Lexeme.Int i, _)] -> fromIntegral i
-  [(Lexeme.Rat r, _)] -> r
+decRational str = case readSigned readFloat str of
+  ((r, _):_) -> r
   _ -> error $ "decRational: not a valid number format: " ++ str
 
 }
