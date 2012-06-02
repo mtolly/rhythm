@@ -14,7 +14,7 @@ data Event
 
 -- | Designed only for duration format, not switch format.
 readEvent :: MIDI.Event dur -> Maybe [Event]
-readEvent (Duration (MIDI.Note _ p _) _) = case V.fromPitch p of
+readEvent (Duration _ (MIDI.Note _ p _)) = case V.fromPitch p of
   12 -> Just [Bar]
   13 -> Just [Beat]
   _  -> Nothing

@@ -36,11 +36,11 @@ data ProDrumsState = ProDrumsState
      pad to hit. -}
 process :: Difficulty -> M.Event Bool -> State ProDrumsState (Maybe Pad)
 -- First, if there's a toms marker, update the state.
-process _ (Duration (M.Toms M.Yellow) b) =
+process _ (Duration b (M.Toms M.Yellow)) =
   modify (\s -> s { yellowToms = b }) >> return Nothing
-process _ (Duration (M.Toms M.Blue) b) =
+process _ (Duration b (M.Toms M.Blue)) =
   modify (\s -> s { blueToms = b }) >> return Nothing
-process _ (Duration (M.Toms M.Green) b) =
+process _ (Duration b (M.Toms M.Green)) =
   modify (\s -> s { greenToms = b }) >> return Nothing
 -- Else, if there's a discobeat event, update the state.
 process d (Point (M.DiffEvent d' (M.Mix _ dsc))) | d == d' = case dsc of
@@ -83,7 +83,7 @@ getProNotes d
 getBasicNotes :: (NNC.C t) => Difficulty -> RTB.T t (M.Event Bool) -> RTB.T t Pad
 -- Just use the Pro function, but remove all toms and mix events.
 getBasicNotes d = getProNotes d . RTB.filter f where
-  f (Duration (M.Toms _) _) = False
+  f (Duration _ (M.Toms _)) = False
   f (Point (M.DiffEvent _ (M.Mix _ _))) = False
   f _ = True
 

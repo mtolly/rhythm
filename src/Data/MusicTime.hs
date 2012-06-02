@@ -104,16 +104,15 @@ rtbJoin rtb = case RTB.viewL rtb of
 
 -- | A container for events that can either have duration or not.
 data TimeEvent d p a
-  = Duration d a
+  = Duration a d
   | Point p
   -- two useful Ord properties:
   --   duration sorts before point, e.g. tom markers sort before drum notes.
   --   when a is Bool, off-events (False) sort before on-events (True).
-  --   TODO: might have to change to "Duration a d"? Maybe "TimeEvent a d p"?
   deriving (Eq, Ord, Show, Read)
 
 instance Functor (TimeEvent d p) where
-  fmap f (Duration x t) = Duration x (f t)
+  fmap f (Duration t d) = Duration (f t) d
   fmap _ (Point p) = Point p
 
 -- | Convert from events that store a duration to separate on/off events. Each
@@ -123,8 +122,8 @@ durationToSwitch :: (NNC.C t, Ord d, Ord p) =>
   RTB.T t (TimeEvent d p t) -> RTB.T t (TimeEvent d p Bool)
 durationToSwitch = rtbJoin . fmap f where
   f (Point x) = RTB.singleton NNC.zero (Point x)
-  f (Duration x dt) = RTB.fromPairList
-    [(NNC.zero, Duration x True), (dt, Duration x False)]
+  f (Duration dt x) = RTB.fromPairList
+    [(NNC.zero, Duration True x), (dt, Duration False x)]
 
 -- | Converts from separate on/off events to events that store a duration. The
 -- first argument converts each duration event to a \"key\"; an on-event and

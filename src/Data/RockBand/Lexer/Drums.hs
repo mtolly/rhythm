@@ -89,11 +89,11 @@ data Hand = LH | RH
 
 -- | Designed only for duration format, not switch format.
 readEvent :: MIDI.Event dur -> Maybe [Event dur]
-readEvent (Duration (MIDI.Note _ p _) len) = case V.fromPitch p of
+readEvent (Duration len (MIDI.Note _ p _)) = case V.fromPitch p of
 
   -- Animation
   24 -> Just [Point $ Animation KickRF]
-  25 -> Just [Duration HihatOpen len]
+  25 -> Just [Duration len HihatOpen]
   26 -> Just [Point $ Animation $ Snare HardHit LH]
   27 -> Just [Point $ Animation $ Snare HardHit RH]
   28 -> Just [Point $ Animation $ Snare SoftHit LH]
@@ -128,30 +128,30 @@ readEvent (Duration (MIDI.Note _ p _) len) = case V.fromPitch p of
     -> Just [Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k]
 
   -- Drum solo
-  103 -> Just [Duration Solo len]
+  103 -> Just [Duration len Solo]
   
   -- Tug of War phrases
-  105 -> Just [Duration Player1 len]
-  106 -> Just [Duration Player2 len]
+  105 -> Just [Duration len Player1]
+  106 -> Just [Duration len Player2]
 
   -- Toms markers
-  110 -> Just [Duration (Toms Yellow) len]
-  111 -> Just [Duration (Toms Blue) len]
-  112 -> Just [Duration (Toms Green) len]
+  110 -> Just [Duration len $ Toms Yellow]
+  111 -> Just [Duration len $ Toms Blue]
+  112 -> Just [Duration len $ Toms Green]
   
   -- Overdrive phrases
-  116 -> Just [Duration Overdrive len]
+  116 -> Just [Duration len Overdrive]
   
   -- Activation fills / BRE
-  120 -> Just [Duration Activation len]
+  120 -> Just [Duration len Activation]
   121 -> Just []
   122 -> Just []
   123 -> Just []
   124 -> Just []
   
   -- Rolls
-  126 -> Just [Duration SingleRoll len]
-  127 -> Just [Duration DoubleRoll len]
+  126 -> Just [Duration len SingleRoll]
+  127 -> Just [Duration len DoubleRoll]
   
   _ -> Nothing
 
@@ -190,7 +190,7 @@ showEvent (Point p) = case p of
     Mix aud dsc -> [Point $ MIDI.TextEvent $ showMix diff aud dsc]
     Note drm ->
       [MIDI.blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm]
-showEvent (Duration d len) = case d of
+showEvent (Duration len d) = case d of
   HihatOpen -> [dlen 25]
   Toms drm -> [dlen $ 108 + fromEnum drm]
   Solo -> [dlen 103]
@@ -200,7 +200,7 @@ showEvent (Duration d len) = case d of
   Activation -> map dlen [120..124]
   SingleRoll -> [dlen 126]
   DoubleRoll -> [dlen 127]
-  where dlen i = Duration (MIDI.standardNote $ V.toPitch i) len
+  where dlen = Duration len . MIDI.standardNote . V.toPitch
 
 showMix :: Difficulty -> Audio -> Disco -> String
 showMix diff aud dsc = "[mix " ++ x ++ " drums" ++ y ++ z ++ "]" where

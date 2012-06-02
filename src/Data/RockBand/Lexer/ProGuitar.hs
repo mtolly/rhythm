@@ -65,10 +65,10 @@ data SlideType
 
 -- | Designed only for duration format, not switch format.
 readEvent :: MIDI.Event dur -> Maybe [Event dur]
-readEvent (Duration (MIDI.Note ch p vel) len) = case V.fromPitch p of
+readEvent (Duration len (MIDI.Note ch p vel)) = case V.fromPitch p of
   -- TODO
-  126 -> Just [Duration Tremolo len]
-  127 -> Just [Duration Trill len]
+  126 -> Just [Duration len Tremolo]
+  127 -> Just [Duration len Trill]
   _ -> Nothing
 readEvent (Point (MIDI.TextEvent str)) = case str of
   (stripPrefix "[begin_pg song_trainer_pg_" -> Just (reads -> [(n, "]")]))

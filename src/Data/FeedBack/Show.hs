@@ -33,7 +33,7 @@ showEventChunk :: String -> EventChunk Ticks -> ShowS
 showEventChunk name chunk = startChunk name . middle . endChunk where
   middle = compose $ map f $ ATB.toPairList $ RTB.toAbsoluteEventList 0 chunk
   f (tks, evt) = showLine (Int tks) $ case evt of
-    Duration d len -> case d of
+    Duration len d -> case d of
       Note fret -> [Ident "N", Int fret, Int len]
       Stream strType -> [Ident "S", Int strType, Int len]
     Point p -> case p of

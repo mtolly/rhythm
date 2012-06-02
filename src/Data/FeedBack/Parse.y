@@ -57,8 +57,8 @@ Event : b int { Point $ BPM $ fromIntegral $2 / 1000 }
       | ts int { Point $ TSig $2 }
       | e quoted { Point $ EventGlobal $2 }
       | e ident { Point $ EventLocal $2 }
-      | n int int { Duration (Note $2) (fromIntegral $3) }
-      | s int int { Duration (Stream $2) (fromIntegral $3) }
+      | n int int { Duration (fromIntegral $3) (Note $2) }
+      | s int int { Duration (fromIntegral $3) (Stream $2) }
 
 Value : int { Int $1 }
       | real { Real $1 }

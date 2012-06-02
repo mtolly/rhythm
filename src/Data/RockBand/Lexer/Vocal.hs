@@ -42,14 +42,14 @@ data PercussionType
 
 -- | Designed only for duration format, not switch format.
 readEvent :: MIDI.Event dur -> Maybe [Event dur]
-readEvent (Duration (MIDI.Note _ p _) len) = case V.fromPitch p of
-  0 -> Just [Duration RangeShift len]
+readEvent (Duration len (MIDI.Note _ p _)) = case V.fromPitch p of
+  0 -> Just [Duration len RangeShift]
   1 -> Just [Point LyricShift]
-  i | 36 <= i && i <= 84 -> Just [Duration (Note p) len]
+  i | 36 <= i && i <= 84 -> Just [Duration len $ Note p]
   96 -> Just [Point Percussion]
   97 -> Just [Point PercussionSound]
-  105 -> Just [Duration Phrase len]
-  106 -> Just [Duration Phrase2 len]
+  105 -> Just [Duration len Phrase]
+  106 -> Just [Duration len Phrase2]
   116 -> Just [Point Overdrive]
   _ -> Nothing
 readEvent (Point (MIDI.Lyric str)) = Just [Point $ Lyric str]

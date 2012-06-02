@@ -15,7 +15,7 @@ type Event = TimeEvent Duration Point
 
 data Duration
   = Note C.Channel V.Pitch V.Velocity
-  -- "Duration (Note _ _ 0) True" should never happen
+  -- "Duration True (Note _ _ 0)" should never happen
   deriving (Eq, Ord, Show)
 
 data Point
@@ -32,8 +32,8 @@ fromMIDITrack = RTB.mapMaybe fromMIDI
 
 fromMIDI :: E.T -> Maybe (Event Bool)
 fromMIDI (E.MIDIEvent (C.Cons ch (C.Voice v))) = case V.explicitNoteOff v of
-  V.NoteOff p vel -> Just $ Duration (Note ch p vel) False
-  V.NoteOn p vel -> Just $ Duration (Note ch p vel) True
+  V.NoteOff p vel -> Just $ Duration False $ Note ch p vel
+  V.NoteOn p vel -> Just $ Duration True $ Note ch p vel
   _ -> Nothing
 fromMIDI (E.MetaEvent (M.TextEvent str)) = Just $ Point $ TextEvent str
 fromMIDI (E.MetaEvent (M.Lyric str)) = Just $ Point $ Lyric str
@@ -45,7 +45,7 @@ standardNote p = Note (C.toChannel 0) p (V.toVelocity 96)
 -- | Creates a MIDI note of the minimum possible duration allowed by Rock Band.
 -- In a valid Rock Band MIDI, this is guaranteed to not overlap other notes.
 blip :: V.Pitch -> Event Beats
-blip p = Duration (standardNote p) $ 1 / 32
+blip p = Duration (1 / 32) $ standardNote p
 
 -- | Extracts and converts events of type 'b', while leaving behind unrecognized
 -- events of type 'a'.

@@ -72,8 +72,8 @@ data StrumMap
 -- | Works with both switch and duration format; a 'Duration' always maps to a
 -- 'Duration' and a 'Point' always maps to a 'Point'.
 readEvent :: MIDI.Event a -> Maybe [Event a]
-readEvent (Duration (MIDI.Note _ p _) b) = case V.fromPitch p of
-  i | 40 <= i && i <= 59 -> Just [Duration (AtFret (GtrFret $ i - 40)) b]
+readEvent (Duration b (MIDI.Note _ p _)) = case V.fromPitch p of
+  i | 40 <= i && i <= 59 -> Just [Duration b (AtFret (GtrFret $ i - 40))]
   i | let (oct, k) = quotRem i 12
     , 5 <= oct && oct <= 8
     , 0 <= k && k <= 6
@@ -82,18 +82,18 @@ readEvent (Duration (MIDI.Note _ p _) b) = case V.fromPitch p of
             5 -> ForceHopo
             6 -> ForceStrum
             _ -> Note (toEnum k)
-    -> Just [Duration (DiffEvent diff evt) b]
-  103 -> Just [Duration Solo b]
-  105 -> Just [Duration Player1 b]
-  106 -> Just [Duration Player2 b]
-  116 -> Just [Duration Overdrive b]
-  120 -> Just [Duration BRE b]
+    -> Just [Duration b (DiffEvent diff evt)]
+  103 -> Just [Duration b Solo]
+  105 -> Just [Duration b Player1]
+  106 -> Just [Duration b Player2]
+  116 -> Just [Duration b Overdrive]
+  120 -> Just [Duration b BRE]
   121 -> Just []
   122 -> Just []
   123 -> Just []
   124 -> Just []
-  126 -> Just [Duration Tremolo b]
-  127 -> Just [Duration Trill b]
+  126 -> Just [Duration b Tremolo]
+  127 -> Just [Duration b Trill]
   _ -> Nothing
 readEvent (Point (MIDI.TextEvent str)) = case str of
   (readMood -> Just m) -> Just [Point $ Mood m]

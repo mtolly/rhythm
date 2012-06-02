@@ -38,19 +38,19 @@ data LaneRange = C | D | E | F | G | A
 
 -- | Designed only for duration format, not switch format.
 readEvent :: MIDI.Event dur -> Maybe [Event dur]
-readEvent (Duration (MIDI.Note _ p _) len) = case V.fromPitch p of
+readEvent (Duration len (MIDI.Note _ p _)) = case V.fromPitch p of
   0 -> Just [Point $ LaneShift C]
   2 -> Just [Point $ LaneShift D]
   4 -> Just [Point $ LaneShift E]
   5 -> Just [Point $ LaneShift F]
   7 -> Just [Point $ LaneShift G]
   9 -> Just [Point $ LaneShift A]
-  i | 48 <= i && i <= 72 -> Just [Duration (Note p) len]
-  115 -> Just [Duration Solo len]
-  116 -> Just [Duration Overdrive len]
-  120 -> Just [Duration BRE len]
-  126 -> Just [Duration Glissando len]
-  127 -> Just [Duration Trill len]
+  i | 48 <= i && i <= 72 -> Just [Duration len (Note p)]
+  115 -> Just [Duration len Solo]
+  116 -> Just [Duration len Overdrive]
+  120 -> Just [Duration len BRE]
+  126 -> Just [Duration len Glissando]
+  127 -> Just [Duration len Trill]
   _ -> Nothing
 readEvent (Point (MIDI.TextEvent str)) = case str of
   (readMood -> Just m) -> Just [Point $ Mood m]
