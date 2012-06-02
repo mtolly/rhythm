@@ -1,15 +1,28 @@
 rhythm-game
 ===========
 
-Haskell library to read/write/convert several rhythm game (Guitar Hero, Rock Band, etc.) file formats.
+Haskell library to read/write/convert several rhythm game (Guitar Hero, Rock
+Band, etc.) file formats. Follows the lead of the `midi` library by heavily
+making use of the `event-list` and `non-negative` libraries.
 
-The event-list library is used heavily, specifically the Data.EventList.Relative.TimeBody type.
+The central file is Data.MusicTime, which defines several universal types for
+timekeeping and describing rhythmic elements.
 
-The key file is Data.MusicTime, which defines a couple of key types:
+* There are three basic units for time. A rational number holding a position or
+duration in `Beats` (quarter notes) is the most central. Many file formats, for
+practicality, store such quarter note durations as integral numerators (called
+`Ticks`) of a fixed denominator (called the `Resolution`). Finally, objects can
+also be positioned in real time, independent of a tempo, by storing a rational
+value of `Seconds`.
 
-* Time is kept in three units: beats/quarter-notes (as a Rational), ticks (beats which are stored
-as numerators of a fixed denominator), and real time in seconds.
+* `Tempo`s and `TimeSignature`s are defined in the obvious ways, and can be used
+to convert between the various timekeeping units (for example, a `Tempo` can
+convert positions between `Beats` and `Seconds`).
 
-* Tempos and time signatures are defined in the obvious ways.
-
-* All the formats read by this library share a common structure: there are events that are "instant points" in time (taking up no duration), and there are events that have an inherent duration to them, a start/end point. To this end, a TimeEvent type is defined with two such constructors. This can be used in one of two ways: in "switch" format, you parametrize the TimeEvent type with Bool, and duration events are stored as two separate events, a beginning (with value True) and an end (with value False). In "duration" format, you parametrize the TimeEvent type with the numeric type used by the EventList for timekeeping, and then a duration event is stored as a single event that remembers its duration directly.
+* Many formats read by this library share a common structure: there are events
+that are "instant points" in time (with no duration), and there are events that
+have a beginning and end point (stretching over some duration). The `TimeEvent`
+datatype encapsulates this idea, and can be used to process such events in one
+of two ways. "Duration" format means that a non-instant event is stored as a
+single object, with a duration value attached. "Switch" format means that a
+non-instant event is stored as two separate beginning and end events.
