@@ -18,7 +18,7 @@ tokens :-
 -- Whitespace.
 $white+ ;
 
--- Numbers. Longest match rule ensures ints will always be Int, not Real.
+-- Numbers. Int rule comes first to ensure ints will be Int, not Real.
 $digit+
   { \pn str -> (pn, TValue $ Int $ NN.fromNumberUnsafe $ read str) }
 \-? $digit+ (\. $digit+)? (e $digit+)?
@@ -40,12 +40,12 @@ $alpha ($alpha | $digit)+ { \pn str -> (pn, TValue $ Ident str) }
 -- Quoted strings.
 \" ([^\"] | \\\")* \" { \pn str -> (pn, TValue $ Quoted $ read str) }
 
--- Other chars.
-\{ { \pn str -> (pn, LBrace) }
-\} { \pn str -> (pn, RBrace) }
-\[ { \pn str -> (pn, LBracket) }
-\] { \pn str -> (pn, RBracket) }
-\= { \pn str -> (pn, Equals) }
+-- Punctuation.
+\{ { \pn _ -> (pn, LBrace) }
+\} { \pn _ -> (pn, RBrace) }
+\[ { \pn _ -> (pn, LBracket) }
+\] { \pn _ -> (pn, RBracket) }
+\= { \pn _ -> (pn, Equals) }
 
 {
 
