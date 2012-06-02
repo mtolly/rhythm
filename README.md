@@ -1,9 +1,9 @@
-rhythm-game
-===========
+rhythm
+======
 
-Haskell library to read/write/convert several rhythm game (Guitar Hero, Rock
-Band, etc.) file formats. Follows the lead of the `midi` library by heavily
-making use of the `event-list` and `non-negative` libraries.
+`rhythm` is a Haskell library to read/write/convert several rhythm game (Guitar
+Hero, Rock Band, etc.) file formats. It is designed to cooperate with the `midi`
+library by heavily making use of the `event-list` and `non-negative` libraries.
 
 The central file is Data.MusicTime, which defines several universal types for
 timekeeping and describing rhythmic elements.
