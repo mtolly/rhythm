@@ -5,6 +5,8 @@ module Data.FeedBack.Lex (scan, Token(..), AlexPosn(..)) where
 
 import qualified Numeric.NonNegative.Wrapper as NN
 import Data.FeedBack.Base
+import Text.ParserCombinators.ReadP
+import qualified Text.Read.Lex as Lexeme
 }
 
 %wrapper "posn"
@@ -17,12 +19,10 @@ tokens :-
 -- Whitespace.
 $white+ ;
 
--- Numbers. Longest match rule means N.N is float, not int.
+-- Numbers. Longest match rule ensures ints will always be Int, not Real.
 $digit+
   { \pn str -> (pn, TValue $ Int $ NN.fromNumberUnsafe $ read str) }
-\-? $digit+ \. $digit+ ('e' $digit+)?
-  { \pn str -> (pn, TValue $ Real $ decRational str) }
-\-? $digit+ e $digit+
+\-? $digit+ (\. $digit+)? (e $digit+)?
   { \pn str -> (pn, TValue $ Real $ decRational str) }
 
 -- Reserved words.
@@ -71,7 +71,10 @@ scan :: String -> [(AlexPosn, Token)]
 scan = alexScanTokens
 
 decRational :: String -> Rational
-decRational ('-':xs) = negate $ decRational xs
-decRational str = realToFrac (read str :: Double) -- TODO: make more precise?
+decRational str = case readP_to_S Lexeme.lex str of
+  [(Lexeme.Symbol "-", rest)] -> negate $ decRational rest
+  [(Lexeme.Int i, _)] -> fromIntegral i
+  [(Lexeme.Rat r, _)] -> r
+  _ -> error $ "decRational: not a valid number format: " ++ str
 
 }
