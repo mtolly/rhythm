@@ -1,11 +1,11 @@
 {-# LANGUAGE PatternGuards, ViewPatterns #-}
 -- | The contents of the \"PART DRUMS\" track.
-module Data.RockBand.Lexer.Drums where
+module Data.Rhythm.RockBand.Lexer.Drums where
 
-import Data.RockBand.Common
+import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.RockBand.Lexer.MIDI as MIDI
-import Data.MusicTime
+import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
+import Data.Rhythm.Types
 import Data.List (stripPrefix)
 
 -- | Any event in the \"PART DRUMS\" track, which includes all the drum track

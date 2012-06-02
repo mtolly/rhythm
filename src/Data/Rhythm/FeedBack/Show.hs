@@ -1,9 +1,9 @@
-module Data.FeedBack.Show (toFile, showFile, showValue) where
+module Data.Rhythm.FeedBack.Show (toFile, showFile, showValue) where
 
-import Data.FeedBack.Base
+import Data.Rhythm.FeedBack.Base
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Data.EventList.Absolute.TimeBody as ATB
-import Data.MusicTime
+import Data.Rhythm.Types
 
 toFile :: FilePath -> File Ticks -> IO ()
 toFile fp db = writeFile fp $ showFile db ""

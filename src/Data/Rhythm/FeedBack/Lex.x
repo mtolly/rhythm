@@ -1,10 +1,10 @@
 {
 {-# OPTIONS_GHC -w #-}
 -- | Generated lexer for FeedBack .chart format
-module Data.FeedBack.Lex (scan, Token(..), AlexPosn(..)) where
+module Data.Rhythm.FeedBack.Lex (scan, Token(..), AlexPosn(..)) where
 
 import qualified Numeric.NonNegative.Wrapper as NN
-import Data.FeedBack.Base
+import Data.Rhythm.FeedBack.Base
 import Numeric
 }
 

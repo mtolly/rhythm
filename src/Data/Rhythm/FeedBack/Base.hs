@@ -4,9 +4,9 @@ created by TurkeyMan for use with FeedBack, his custom Guitar Hero charting
 program. Instead of note on/off events like in MIDI, each note is stored with a
 duration value. The .chart file also stores various metadata about the song.
 -}
-module Data.FeedBack.Base where
+module Data.Rhythm.FeedBack.Base where
 
-import Data.MusicTime
+import Data.Rhythm.Types
 import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Maybe (listToMaybe)

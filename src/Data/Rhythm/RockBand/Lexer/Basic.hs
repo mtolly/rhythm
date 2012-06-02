@@ -1,13 +1,13 @@
 {-# LANGUAGE ViewPatterns, PatternGuards #-}
 -- | The contents of the \"PART GUITAR\/BASS\/KEYS\" tracks.
-module Data.RockBand.Lexer.Basic where
+module Data.Rhythm.RockBand.Lexer.Basic where
 
-import Data.RockBand.Common
+import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
 import Control.Monad
-import Data.MusicTime
+import Data.Rhythm.Types
 import Data.List (stripPrefix)
-import qualified Data.RockBand.Lexer.MIDI as MIDI
+import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
 
 type Event = TimeEvent Duration Point
 

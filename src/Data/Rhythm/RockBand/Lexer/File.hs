@@ -1,14 +1,14 @@
 -- | The datatype that contains an entire Rock Band .mid file.
-module Data.RockBand.Lexer.File where
+module Data.Rhythm.RockBand.Lexer.File where
 
 import qualified Data.EventList.Relative.TimeBody as RTB
-import qualified Data.RockBand.Lexer.Drums as Drums
-import qualified Data.RockBand.Lexer.Basic as Basic
-import qualified Data.RockBand.Lexer.ProKeys as ProKeys
-import qualified Data.RockBand.Lexer.ProGuitar as ProGuitar
-import qualified Data.RockBand.Lexer.Vocal as Vocal
-import qualified Data.RockBand.Lexer.Events as Events
-import qualified Data.RockBand.Lexer.Beat as Beat
+import qualified Data.Rhythm.RockBand.Lexer.Drums as Drums
+import qualified Data.Rhythm.RockBand.Lexer.Basic as Basic
+import qualified Data.Rhythm.RockBand.Lexer.ProKeys as ProKeys
+import qualified Data.Rhythm.RockBand.Lexer.ProGuitar as ProGuitar
+import qualified Data.Rhythm.RockBand.Lexer.Vocal as Vocal
+import qualified Data.Rhythm.RockBand.Lexer.Events as Events
+import qualified Data.Rhythm.RockBand.Lexer.Beat as Beat
 
 data RockBand t a = RockBand
   { partDrums        :: Maybe (RTB.T t (Drums.Event a))

@@ -1,5 +1,5 @@
 -- | Types which are used across multiple Rock Band instruments.
-module Data.RockBand.Common where
+module Data.Rhythm.RockBand.Common where
 
 data Difficulty
   = Easy

@@ -1,11 +1,11 @@
 {-# LANGUAGE ViewPatterns #-}
 -- | The contents of the \"EVENTS\" track.
-module Data.RockBand.Lexer.Events where
+module Data.Rhythm.RockBand.Lexer.Events where
 
 import Control.Monad ((>=>))
-import qualified Data.RockBand.Lexer.MIDI as MIDI
+import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
 import Data.List (stripPrefix)
-import Data.MusicTime
+import Data.Rhythm.Types
 
 data Event
   = MusicStart

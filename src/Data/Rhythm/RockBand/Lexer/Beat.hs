@@ -1,9 +1,9 @@
 -- | The contents of the \"BEAT\" track.
-module Data.RockBand.Lexer.Beat where
+module Data.Rhythm.RockBand.Lexer.Beat where
 
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.RockBand.Lexer.MIDI as MIDI
-import Data.MusicTime
+import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
+import Data.Rhythm.Types
 
 data Event
   -- | A thick barline; the beginning of a new measure.

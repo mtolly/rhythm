@@ -1,12 +1,12 @@
 {-# LANGUAGE ViewPatterns #-}
 -- | The contents of the \"PART REAL_GUITAR\", \"PART REAL_GUITAR_22\",
 -- \"PART REAL_BASS\", and \"PART REAL_BASS_22\" tracks.
-module Data.RockBand.Lexer.ProGuitar where
+module Data.Rhythm.RockBand.Lexer.ProGuitar where
 
-import Data.RockBand.Common
+import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.RockBand.Lexer.MIDI as MIDI
-import Data.MusicTime
+import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
+import Data.Rhythm.Types
 import Data.List (stripPrefix)
 
 data GtrString = S6 | S5 | S4 | S3 | S2 | S1

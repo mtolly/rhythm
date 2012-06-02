@@ -1,11 +1,11 @@
 {-# LANGUAGE ViewPatterns #-}
 -- | The contents of the \"PART REAL_KEYS_?\" and \"KEYS_ANIM_?H\" tracks.
-module Data.RockBand.Lexer.ProKeys where
+module Data.Rhythm.RockBand.Lexer.ProKeys where
 
-import Data.RockBand.Common
+import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.RockBand.Lexer.MIDI as MIDI
-import Data.MusicTime
+import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
+import Data.Rhythm.Types
 import Data.List (stripPrefix)
 
 type Event = TimeEvent Duration Point

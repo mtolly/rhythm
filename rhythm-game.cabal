@@ -10,23 +10,21 @@ hs-source-dirs:     src
 ghc-options:        -Wall
 Build-Depends:      base, non-negative, event-list, midi, transformers, array
 
-Exposed-modules:    Data.MusicTime
+Exposed-modules:    Data.Rhythm.Types
 
-                    Data.FeedBack.Base
-                    Data.FeedBack.Lex
-                    Data.FeedBack.Parse
-                    Data.FeedBack.Show
+                    Data.Rhythm.FeedBack.Base
+                    Data.Rhythm.FeedBack.Lex
+                    Data.Rhythm.FeedBack.Parse
+                    Data.Rhythm.FeedBack.Show
 
-                    Data.RockBand.Common
+                    Data.Rhythm.RockBand.Common
 
-                    Data.RockBand.Lexer.Beat
-                    Data.RockBand.Lexer.Drums
-                    Data.RockBand.Lexer.Basic
-                    Data.RockBand.Lexer.Vocal
-                    Data.RockBand.Lexer.ProKeys
-                    Data.RockBand.Lexer.ProGuitar
-                    Data.RockBand.Lexer.Events
-                    Data.RockBand.Lexer.File
-                    Data.RockBand.Lexer.MIDI
-                    
-                    Data.RockBand.Input.Drums
+                    Data.Rhythm.RockBand.Lexer.Beat
+                    Data.Rhythm.RockBand.Lexer.Drums
+                    Data.Rhythm.RockBand.Lexer.Basic
+                    Data.Rhythm.RockBand.Lexer.Vocal
+                    Data.Rhythm.RockBand.Lexer.ProKeys
+                    Data.Rhythm.RockBand.Lexer.ProGuitar
+                    Data.Rhythm.RockBand.Lexer.Events
+                    Data.Rhythm.RockBand.Lexer.File
+                    Data.Rhythm.RockBand.Lexer.MIDI

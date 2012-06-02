@@ -1,11 +1,11 @@
 {
 -- | Generated parser for FeedBack .chart format
-module Data.FeedBack.Parse (parse, fromFile) where
+module Data.Rhythm.FeedBack.Parse (parse, fromFile) where
 
 import qualified Numeric.NonNegative.Wrapper as NN
-import Data.FeedBack.Base
-import Data.FeedBack.Lex
-import Data.MusicTime
+import Data.Rhythm.FeedBack.Base
+import Data.Rhythm.FeedBack.Lex
+import Data.Rhythm.Types
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Data.EventList.Absolute.TimeBody as ATB
 }

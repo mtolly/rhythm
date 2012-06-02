@@ -1,5 +1,5 @@
 -- | A simpler format to hold only the MIDI events used in Rock Band files.
-module Data.RockBand.Lexer.MIDI where
+module Data.Rhythm.RockBand.Lexer.MIDI where
 
 import qualified Sound.MIDI.File.Event as E
 import qualified Sound.MIDI.File.Event.Meta as M
@@ -7,7 +7,7 @@ import qualified Sound.MIDI.Message.Channel as C
 import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Numeric.NonNegative.Class as NNC
 import qualified Data.EventList.Relative.TimeBody as RTB
-import Data.MusicTime
+import Data.Rhythm.Types
 import Control.Monad.Trans.State
 import Data.List (stripPrefix)
 

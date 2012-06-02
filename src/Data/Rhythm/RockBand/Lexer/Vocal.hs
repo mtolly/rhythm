@@ -1,12 +1,12 @@
 {-# LANGUAGE ViewPatterns #-}
 {- | The events found in the \"PART VOCAL\", \"HARM1\", \"HARM2\", and
      \"HARM3\" tracks. -}
-module Data.RockBand.Lexer.Vocal where
+module Data.Rhythm.RockBand.Lexer.Vocal where
 
-import Data.RockBand.Common
+import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.RockBand.Lexer.MIDI as MIDI
-import Data.MusicTime
+import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
+import Data.Rhythm.Types
 
 type Event = TimeEvent Duration Point
 

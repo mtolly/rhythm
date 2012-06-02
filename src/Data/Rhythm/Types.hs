@@ -26,7 +26,7 @@ ways.
     False duration), which together denote the boundaries of an event.
 
 -}
-module Data.MusicTime where
+module Data.Rhythm.Types where
 
 import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Numeric.NonNegative.Class as NNC
