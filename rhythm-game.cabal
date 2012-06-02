@@ -14,7 +14,8 @@ Build-Depends:      base, non-negative, event-list, midi, transformers, array,
 Exposed-modules:    Data.MusicTime
 
                     Data.FeedBack.Base
-                    Data.FeedBack.Parsec
+                    Data.FeedBack.Lex
+                    Data.FeedBack.Parse
                     Data.FeedBack.Show
 
                     Data.RockBand.Common

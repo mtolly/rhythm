@@ -13,7 +13,7 @@ import qualified Data.EventList.Absolute.TimeBody as ATB
 import Control.Applicative
 
 type Fret = NN.Integer
-type SwitchType = NN.Integer
+type StreamType = NN.Integer
 
 data Value
   = Int NN.Integer -- ^ Non-negative integer literals, like 0, 8, or 123
@@ -24,19 +24,19 @@ data Value
 
 type RawChunk = [(Value, [Value])]
 type SongChunk = [(String, Value)]
-type TimeChunk t = RTB.T t (Event t)
+type EventChunk t = RTB.T t (Event t)
 
 data File t = File
   { song :: SongChunk
-  , sync :: TimeChunk t
-  , events :: [(String, TimeChunk t)] }
+  , sync :: EventChunk t
+  , events :: [(String, EventChunk t)] }
   deriving (Eq, Ord, Show)
 
 type Event = TimeEvent Duration Point
 
 data Duration
   = Note Fret
-  | Switch SwitchType
+  | Stream StreamType
   deriving (Eq, Ord, Show)
 
 data Point
@@ -49,8 +49,8 @@ data Point
 
 -- | Reads a chunk that represents a timeline of events. On error (Left),
 -- returns the offending line that could not be processed as "num = event".
-readTimeChunk :: RawChunk -> Either (Value, [Value]) (TimeChunk Ticks)
-readTimeChunk raw =
+readEventChunk :: RawChunk -> Either (Value, [Value]) (EventChunk Ticks)
+readEventChunk raw =
   RTB.fromAbsoluteEventList . ATB.fromPairList <$> mapM getPair raw where
     getPair :: (Value, [Value]) -> Either (Value, [Value]) (Ticks, Event Ticks)
     getPair p@(lval, rval) = case (lval, readEvent rval) of
@@ -65,7 +65,7 @@ readEvent (Ident i : rest) = case (i, rest) of
   ("E", [Quoted e]) -> Just $ Point $ EventGlobal e
   ("E", [Ident e]) -> Just $ Point $ EventLocal e
   ("N", [Int f, Int d]) -> Just $ Duration (Note f) $ fromIntegral d
-  ("S", [Int t, Int d]) -> Just $ Duration (Switch t) $ fromIntegral d
+  ("S", [Int t, Int d]) -> Just $ Duration (Stream t) $ fromIntegral d
   _ -> Nothing
 readEvent _ = Nothing
 
@@ -79,4 +79,4 @@ showEvent e = case e of
     EventLocal str -> [Ident "E", Ident str]
   Duration d tks -> case d of
     Note f -> [Ident "N", Int f, Int $ fromIntegral tks]
-    Switch t -> [Ident "S", Int t, Int $ fromIntegral tks]
+    Stream t -> [Ident "S", Int t, Int $ fromIntegral tks]
