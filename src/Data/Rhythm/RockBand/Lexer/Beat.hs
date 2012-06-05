@@ -6,10 +6,8 @@ import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
 import Data.Rhythm.Types
 
 data Event
-  -- | A thick barline; the beginning of a new measure.
-  = Bar
-  -- | A thin barline; a beat in the middle of a measure.
-  | Beat
+  = Bar -- ^ A thick barline; the beginning of a new measure.
+  | Beat -- ^ A thin barline; a beat in the middle of a measure.
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 -- | Designed only for duration format, not switch format.

@@ -25,4 +25,7 @@ have a beginning and end point (stretching over some duration). The `TimeEvent`
 datatype encapsulates this idea, and can be used to process such events in one
 of two ways. "Duration" format means that a non-instant event is stored as a
 single object, with a duration value attached. "Switch" format means that a
-non-instant event is stored as two separate beginning and end events.
+non-instant event is stored as two separate beginning and end events. MIDI is
+inherently a "Switch" format -- notes are stored as note-on and note-off events.
+FeedBack uses a "Duration" format -- a note is a single event of the form
+`time = N fret len`, where `len` is the length of the note.

@@ -9,7 +9,9 @@ toFile :: FilePath -> File Ticks -> IO ()
 toFile fp db = writeFile fp $ showFile db ""
 
 showFile :: File Ticks -> ShowS
-showFile (File son syn chs) = showSongChunk son . showEventChunk "SyncTrack" syn
+showFile (File son syn chs)
+  = showSongChunk son
+  . showEventChunk "SyncTrack" syn
   . compose (map (uncurry showEventChunk) chs)
 
 compose :: [a -> a] -> a -> a
