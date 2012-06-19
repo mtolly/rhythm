@@ -1,6 +1,6 @@
 module Data.Rhythm.FeedBack.Show (toFile, showFile, showValue) where
 
-import Data.Rhythm.FeedBack.Base
+import Data.Rhythm.FeedBack
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Data.EventList.Absolute.TimeBody as ATB
 import Data.Rhythm.Types

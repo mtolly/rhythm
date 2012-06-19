@@ -4,7 +4,7 @@
 module Data.Rhythm.FeedBack.Lex (scan, Token(..), AlexPosn(..)) where
 
 import qualified Numeric.NonNegative.Wrapper as NN
-import Data.Rhythm.FeedBack.Base
+import Data.Rhythm.FeedBack
 import Numeric
 }
 

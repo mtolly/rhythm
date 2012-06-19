@@ -3,7 +3,7 @@
 module Data.Rhythm.FeedBack.Parse (parse, fromFile) where
 
 import qualified Numeric.NonNegative.Wrapper as NN
-import Data.Rhythm.FeedBack.Base
+import Data.Rhythm.FeedBack
 import Data.Rhythm.FeedBack.Lex
 import Data.Rhythm.Types
 import qualified Data.EventList.Relative.TimeBody as RTB

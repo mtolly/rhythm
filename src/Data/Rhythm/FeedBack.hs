@@ -4,7 +4,7 @@ created by TurkeyMan for use with FeedBack, his custom Guitar Hero charting
 program. Instead of note on/off events like in MIDI, each note is stored with a
 duration value. The .chart file also stores various metadata about the song.
 -}
-module Data.Rhythm.FeedBack.Base where
+module Data.Rhythm.FeedBack where
 
 import Data.Rhythm.Types
 import qualified Numeric.NonNegative.Wrapper as NN
