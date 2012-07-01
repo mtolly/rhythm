@@ -1,17 +1,15 @@
-{-# LANGUAGE ViewPatterns, PatternGuards #-}
+{-# LANGUAGE ViewPatterns, PatternGuards, MultiParamTypeClasses #-}
 -- | The contents of the \"PART GUITAR\/BASS\/KEYS\" tracks.
-module Data.Rhythm.RockBand.Lexer.Basic where
+module Data.Rhythm.RockBand.Lex.Basic where
 
 import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
 import Control.Monad
-import Data.Rhythm.Types
+import Data.Rhythm.Event
 import Data.List (stripPrefix)
-import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
+import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 
-type Event = TimeEvent Duration Point
-
-data Duration
+data Long
   = Solo
   | Tremolo
   | Trill
@@ -27,10 +25,12 @@ data Point
   = Mood Mood
   | HandMap HandMap
   | StrumMap StrumMap
-  -- | A shortcut encoding for a note without sustain. A 'Note' with duration
-  -- of a sixteenth note (1/4 a quarter note) or less is equivalent.
-  | PointNote Fret
   deriving (Eq, Ord, Show, Read)
+
+instance Duration Long Point where
+  condense x@(AtFret _) (AtFret _) = Just x
+  condense x y = guard (x == y) >> Just x
+type T = Event Long Point
 
 data DiffEvent
   = ForceHopo
@@ -71,9 +71,9 @@ data StrumMap
 
 -- | Works with both switch and duration format; a 'Duration' always maps to a
 -- 'Duration' and a 'Point' always maps to a 'Point'.
-readEvent :: MIDI.Event a -> Maybe [Event a]
-readEvent (Duration b (MIDI.Note _ p _)) = case V.fromPitch p of
-  i | 40 <= i && i <= 59 -> Just [Duration b (AtFret (GtrFret $ i - 40))]
+readEvent :: MIDI.T t -> Maybe [T t]
+readEvent (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
+  i | 40 <= i && i <= 59 -> Just [Long b (AtFret (GtrFret $ i - 40))]
   i | let (oct, k) = quotRem i 12
     , 5 <= oct && oct <= 8
     , 0 <= k && k <= 6
@@ -82,18 +82,18 @@ readEvent (Duration b (MIDI.Note _ p _)) = case V.fromPitch p of
             5 -> ForceHopo
             6 -> ForceStrum
             _ -> Note (toEnum k)
-    -> Just [Duration b (DiffEvent diff evt)]
-  103 -> Just [Duration b Solo]
-  105 -> Just [Duration b Player1]
-  106 -> Just [Duration b Player2]
-  116 -> Just [Duration b Overdrive]
-  120 -> Just [Duration b BRE]
+    -> Just [Long b (DiffEvent diff evt)]
+  103 -> Just [Long b Solo]
+  105 -> Just [Long b Player1]
+  106 -> Just [Long b Player2]
+  116 -> Just [Long b Overdrive]
+  120 -> Just [Long b BRE]
   121 -> Just []
   122 -> Just []
   123 -> Just []
   124 -> Just []
-  126 -> Just [Duration b Tremolo]
-  127 -> Just [Duration b Trill]
+  126 -> Just [Long b Tremolo]
+  127 -> Just [Long b Trill]
   _ -> Nothing
 readEvent (Point (MIDI.TextEvent str)) = case str of
   (readMood -> Just m) -> Just [Point $ Mood m]

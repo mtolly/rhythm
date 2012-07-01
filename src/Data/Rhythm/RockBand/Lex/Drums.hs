@@ -1,18 +1,16 @@
-{-# LANGUAGE PatternGuards, ViewPatterns #-}
+{-# LANGUAGE PatternGuards, ViewPatterns, MultiParamTypeClasses #-}
 -- | The contents of the \"PART DRUMS\" track.
-module Data.Rhythm.RockBand.Lexer.Drums where
+module Data.Rhythm.RockBand.Lex.Drums where
 
 import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
-import Data.Rhythm.Types
+import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import Data.Rhythm.Time
+import Data.Rhythm.Event
 import Data.List (stripPrefix)
+import qualified Numeric.NonNegative.Class as NNC
 
--- | Any event in the \"PART DRUMS\" track, which includes all the drum track
--- notes/modifiers as well as the animation events for the drummer character.
-type Event = TimeEvent Duration Point
-
-data Duration
+data Long
   = Toms Drum -- ^ Change 'Yellow', 'Blue', and 'Green' cymbal notes to toms.
   | Overdrive -- ^ The phrase which fills the player's energy bar.
   | Activation -- ^ Fill lanes for Overdrive activation and Big Rock Endings.
@@ -29,6 +27,9 @@ data Point
   | Mood Mood -- ^ The drummer's playing mood.
   | DiffEvent Difficulty DiffEvent -- ^ Events for a specific difficulty.
   deriving (Eq, Ord, Show, Read)
+
+instance Duration Long Point
+type T = Event Long Point
 
 data DiffEvent
   = Mix Audio Disco -- ^ Set the drum audio & pad layout.
@@ -81,19 +82,17 @@ data Animation
   deriving (Eq, Ord, Show, Read)
 
 -- | Used in 'Animation' events to show accented or ghost notes.
-data Hit = SoftHit | HardHit
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
+data Hit = SoftHit | HardHit deriving (Eq, Ord, Show, Read, Enum, Bounded)
 -- | Used in 'Animation' events to control which hand hits a drum.
-data Hand = LH | RH
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
+data Hand = LH | RH deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 -- | Designed only for duration format, not switch format.
-readEvent :: MIDI.Event dur -> Maybe [Event dur]
-readEvent (Duration len (MIDI.Note _ p _)) = case V.fromPitch p of
+readEvent :: (NNC.C t) => MIDI.T t -> Maybe [T t]
+readEvent (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
 
   -- Animation
   24 -> Just [Point $ Animation KickRF]
-  25 -> Just [Duration len HihatOpen]
+  25 -> Just [Long len HihatOpen]
   26 -> Just [Point $ Animation $ Snare HardHit LH]
   27 -> Just [Point $ Animation $ Snare HardHit RH]
   28 -> Just [Point $ Animation $ Snare SoftHit LH]
@@ -128,30 +127,30 @@ readEvent (Duration len (MIDI.Note _ p _)) = case V.fromPitch p of
     -> Just [Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k]
 
   -- Drum solo
-  103 -> Just [Duration len Solo]
+  103 -> Just [Long len Solo]
   
   -- Tug of War phrases
-  105 -> Just [Duration len Player1]
-  106 -> Just [Duration len Player2]
+  105 -> Just [Long len Player1]
+  106 -> Just [Long len Player2]
 
   -- Toms markers
-  110 -> Just [Duration len $ Toms Yellow]
-  111 -> Just [Duration len $ Toms Blue]
-  112 -> Just [Duration len $ Toms Green]
+  110 -> Just [Long len $ Toms Yellow]
+  111 -> Just [Long len $ Toms Blue]
+  112 -> Just [Long len $ Toms Green]
   
   -- Overdrive phrases
-  116 -> Just [Duration len Overdrive]
+  116 -> Just [Long len Overdrive]
   
   -- Activation fills / BRE
-  120 -> Just [Duration len Activation]
+  120 -> Just [Long len Activation]
   121 -> Just []
   122 -> Just []
   123 -> Just []
   124 -> Just []
   
   -- Rolls
-  126 -> Just [Duration len SingleRoll]
-  127 -> Just [Duration len DoubleRoll]
+  126 -> Just [Long len SingleRoll]
+  127 -> Just [Long len DoubleRoll]
   
   _ -> Nothing
 
@@ -182,7 +181,7 @@ readMix str
   | otherwise = Nothing
   -- Pattern guards: they're pretty cool
 
-showEvent :: Event Beats -> [MIDI.Event Beats]
+showEvent :: T Beats -> [MIDI.T Beats]
 showEvent (Point p) = case p of
   Animation anim -> [showAnimation anim]
   Mood m -> [Point $ MIDI.TextEvent $ showMood m]
@@ -190,7 +189,7 @@ showEvent (Point p) = case p of
     Mix aud dsc -> [Point $ MIDI.TextEvent $ showMix diff aud dsc]
     Note drm ->
       [MIDI.blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm]
-showEvent (Duration len d) = case d of
+showEvent (Long len d) = case d of
   HihatOpen -> [dlen 25]
   Toms drm -> [dlen $ 108 + fromEnum drm]
   Solo -> [dlen 103]
@@ -200,7 +199,7 @@ showEvent (Duration len d) = case d of
   Activation -> map dlen [120..124]
   SingleRoll -> [dlen 126]
   DoubleRoll -> [dlen 127]
-  where dlen = Duration len . MIDI.standardNote . V.toPitch
+  where dlen = Long len . MIDI.standardNote . V.toPitch
 
 showMix :: Difficulty -> Audio -> Disco -> String
 showMix diff aud dsc = "[mix " ++ x ++ " drums" ++ y ++ z ++ "]" where
@@ -213,10 +212,10 @@ showMix diff aud dsc = "[mix " ++ x ++ " drums" ++ y ++ z ++ "]" where
     EasyMix -> "easy"
     EasyNoKick -> "easynokick"
 
-showAnimation :: Animation -> MIDI.Event Beats
+showAnimation :: Animation -> MIDI.T Beats
 showAnimation anim = case anim of
   KickRF -> blip 24
-  -- HihatOpen (25) is Duration
+  -- HihatOpen (25) is Long
   Snare HardHit LH -> blip 26
   Snare HardHit RH -> blip 27
   Snare SoftHit LH -> blip 28

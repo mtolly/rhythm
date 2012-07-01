@@ -4,9 +4,11 @@ created by TurkeyMan for use with FeedBack, his custom Guitar Hero charting
 program. Instead of note on/off events like in MIDI, each note is stored with a
 duration value. The .chart file also stores various metadata about the song.
 -}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Rhythm.FeedBack where
 
-import Data.Rhythm.Types
+import Data.Rhythm.Time
+import Data.Rhythm.Event
 import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Maybe (listToMaybe)
@@ -18,32 +20,30 @@ data Value
   | Ident String -- ^ Raw identifiers, like TS, rhythm, or Song
   deriving (Eq, Ord, Show)
 
-type SongChunk = [(String, Value)]
-type EventChunk t = RTB.T t (Event t)
+type SongData = [(String, Value)]
+type Chunk t = RTB.T t (T t)
 
 data File t = File
-  { songChunk :: SongChunk
-  , syncTrack :: EventChunk t
-  , eventChunks :: [(String, EventChunk t)] }
+  { songData :: SongData
+  , syncTrack :: Chunk t
+  , chunks :: [(String, Chunk t)] }
   deriving (Eq, Ord, Show)
 
-type Event = TimeEvent Duration Point
-
-data Duration
-  = Note Fret
-  | Stream StreamType
+data Long
+  = Note NN.Integer
+  | Stream NN.Integer
   deriving (Eq, Ord, Show)
-
-type Fret = NN.Integer
-type StreamType = NN.Integer
 
 data Point
   = BPM BPM
   | Anchor Seconds
-  | TSig NN.Integer
+  | TimeSig NN.Integer
   | EventGlobal String
   | EventLocal String
   deriving (Eq, Ord, Show)
 
+instance Duration Long Point
+type T = Event Long Point
+
 getResolution :: File a -> Maybe Resolution
-getResolution f = listToMaybe [res | ("Resolution", Int res) <- songChunk f]
+getResolution f = listToMaybe [res | ("Resolution", Int res) <- songData f]

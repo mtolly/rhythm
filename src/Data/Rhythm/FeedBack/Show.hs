@@ -3,7 +3,8 @@ module Data.Rhythm.FeedBack.Show (toFile, showFile, showValue) where
 import Data.Rhythm.FeedBack
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Data.EventList.Absolute.TimeBody as ATB
-import Data.Rhythm.Types
+import Data.Rhythm.Time
+import Data.Rhythm.Event
 
 toFile :: FilePath -> File Ticks -> IO ()
 toFile fp db = writeFile fp $ showFile db ""
@@ -27,21 +28,21 @@ showLine lhs rhs onto = concat
 endChunk :: ShowS
 endChunk onto = "}\n" ++ onto
 
-showSongChunk :: SongChunk -> ShowS
+showSongChunk :: SongData -> ShowS
 showSongChunk chunk = startChunk "Song" . compose (map f chunk) . endChunk where
   f (str, val) = showLine (Ident str) [val]
 
-showEventChunk :: String -> EventChunk Ticks -> ShowS
+showEventChunk :: String -> Chunk Ticks -> ShowS
 showEventChunk name chunk = startChunk name . middle . endChunk where
   middle = compose $ map f $ ATB.toPairList $ RTB.toAbsoluteEventList 0 chunk
   f (tks, evt) = showLine (Int tks) $ case evt of
-    Duration len d -> case d of
+    Long len d -> case d of
       Note fret -> [Ident "N", Int fret, Int len]
       Stream strType -> [Ident "S", Int strType, Int len]
     Point p -> case p of
       BPM bpm -> [Ident "B", Int $ floor $ bpm * 1000]
       Anchor secs -> [Ident "A", Int $ floor $ secs * 1000000]
-      TSig i -> [Ident "TS", Int i]
+      TimeSig i -> [Ident "TS", Int i]
       EventGlobal str -> [Ident "E", Quoted str]
       EventLocal str -> [Ident "E", Ident str]
 

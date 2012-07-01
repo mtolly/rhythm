@@ -93,31 +93,29 @@ instance Binary Chunk where
   get = getWord32le >>= \cid -> case cid of
     0x0  -> Int . fromIntegral <$> getWord32le
     0x1  -> Float <$> getFloat32le
-    0x2  -> Var <$> getLenText
-    0x5  -> Key <$> getLenText
+    0x2  -> Var <$> getLenStr
+    0x5  -> Key <$> getLenStr
     0x6  -> skip 4 >> return Unhandled
-    0x7  -> IfDef <$> getLenText
+    0x7  -> IfDef <$> getLenStr
     0x8  -> skip 4 >> return Else
     0x9  -> skip 4 >> return EndIf
     0x10 -> Parens <$> get
     0x11 -> Braces <$> get
-    0x12 -> String <$> getLenText
+    0x12 -> String <$> getLenStr
     0x13 -> Brackets <$> get
-    0x20 -> Define <$> getLenText
-    0x21 -> Include <$> getLenText
-    0x22 -> Merge <$> getLenText
-    0x23 -> IfNDef <$> getLenText
+    0x20 -> Define <$> getLenStr
+    0x21 -> Include <$> getLenStr
+    0x22 -> Merge <$> getLenStr
+    0x23 -> IfNDef <$> getLenStr
     _    -> fail $ "Unidentified DTB chunk with ID " ++ show cid
 
 -- | DTB string format: 4-byte length, then a string in latin-1.
 putLenStr :: B.ByteString -> Put
-putLenStr b = do
-  putWord32le $ fromIntegral $ B.length b
-  putByteString b
+putLenStr b = putWord32le (fromIntegral $ B.length b) >> putByteString b
 
 -- | DTB string format: 4-byte length, then a string in latin-1.
-getLenText :: Get B.ByteString
-getLenText = getWord32le >>= getBytes . fromIntegral
+getLenStr :: Get B.ByteString
+getLenStr = getWord32le >>= getBytes . fromIntegral
 
 -- | Assign new sequential node IDs to each tree in a DTA, starting with the
 -- top-level tree.

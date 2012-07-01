@@ -1,14 +1,16 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns, MultiParamTypeClasses #-}
 -- | The contents of the \"PART REAL_KEYS_?\" and \"KEYS_ANIM_?H\" tracks.
-module Data.Rhythm.RockBand.Lexer.ProKeys where
+module Data.Rhythm.RockBand.Lex.ProKeys where
 
 import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
-import Data.Rhythm.Types
+import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import Data.Rhythm.Event
 import Data.List (stripPrefix)
+import qualified Numeric.NonNegative.Class as NNC
 
-type Event = TimeEvent Duration Point
+instance Duration Long Point
+type T = Event Long Point
 
 data Point
   {- | Change the viewable play range. Should be placed at least a measure
@@ -22,7 +24,7 @@ data Point
   | Mood Mood
   deriving (Eq, Ord, Show)
 
-data Duration
+data Long
   = Solo -- ^ A keyboard solo section.
   | Glissando -- ^ Place over a sequence of white notes for a freeform section.
   | Trill -- ^ Fill lanes on two keys.
@@ -36,21 +38,20 @@ data Duration
 data LaneRange = C | D | E | F | G | A
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
--- | Designed only for duration format, not switch format.
-readEvent :: MIDI.Event dur -> Maybe [Event dur]
-readEvent (Duration len (MIDI.Note _ p _)) = case V.fromPitch p of
+readEvent :: (NNC.C t) => MIDI.T t -> Maybe [T t]
+readEvent (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
   0 -> Just [Point $ LaneShift C]
   2 -> Just [Point $ LaneShift D]
   4 -> Just [Point $ LaneShift E]
   5 -> Just [Point $ LaneShift F]
   7 -> Just [Point $ LaneShift G]
   9 -> Just [Point $ LaneShift A]
-  i | 48 <= i && i <= 72 -> Just [Duration len (Note p)]
-  115 -> Just [Duration len Solo]
-  116 -> Just [Duration len Overdrive]
-  120 -> Just [Duration len BRE]
-  126 -> Just [Duration len Glissando]
-  127 -> Just [Duration len Trill]
+  i | 48 <= i && i <= 72 -> Just [Long len (Note p)]
+  115 -> Just [Long len Solo]
+  116 -> Just [Long len Overdrive]
+  120 -> Just [Long len BRE]
+  126 -> Just [Long len Glissando]
+  127 -> Just [Long len Trill]
   _ -> Nothing
 readEvent (Point (MIDI.TextEvent str)) = case str of
   (readMood -> Just m) -> Just [Point $ Mood m]

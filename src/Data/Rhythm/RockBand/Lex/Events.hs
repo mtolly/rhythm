@@ -1,13 +1,13 @@
 {-# LANGUAGE ViewPatterns #-}
 -- | The contents of the \"EVENTS\" track.
-module Data.Rhythm.RockBand.Lexer.Events where
+module Data.Rhythm.RockBand.Lex.Events where
 
-import Control.Monad ((>=>))
-import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
+import Control.Monad ((>=>), mplus)
+import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.List (stripPrefix)
-import Data.Rhythm.Types
+import Data.Rhythm.Event
 
-data Event
+data T
   = MusicStart
   | MusicEnd
   | End
@@ -25,10 +25,10 @@ data Crowd
   | Clap Bool
   deriving (Eq, Ord, Show, Read)
 
-readEvent :: MIDI.Event a -> Maybe Event
+readEvent :: MIDI.T a -> Maybe T
 readEvent (Point (MIDI.TextEvent str)) = case str of
-  (tryCrowd -> Just c) -> Just $ Crowd c
-  (tryPractice -> Just sec) -> Just $ Practice sec
+  (readCrowd -> Just c) -> Just $ Crowd c
+  (readPractice -> Just sec) -> Just $ Practice sec
   "[music_start]" -> Just MusicStart
   "[music_end]"   -> Just MusicEnd
   "[end]"         -> Just End
@@ -36,8 +36,8 @@ readEvent (Point (MIDI.TextEvent str)) = case str of
   _               -> Nothing
 readEvent _ = Nothing
 
-tryCrowd :: String -> Maybe Crowd
-tryCrowd = stripPrefix "[crowd_" >=> \rest -> case rest of
+readCrowd :: String -> Maybe Crowd
+readCrowd = stripPrefix "[crowd_" >=> \rest -> case rest of
   "realtime]" -> Just Realtime
   "intense]"  -> Just Intense
   "normal]"   -> Just Normal
@@ -46,5 +46,6 @@ tryCrowd = stripPrefix "[crowd_" >=> \rest -> case rest of
   "noclap]"   -> Just $ Clap False
   _           -> Nothing
 
-tryPractice :: String -> Maybe String
-tryPractice = stripPrefix "[prc_" >=> MIDI.stripSuffix "]"
+readPractice :: String -> Maybe String
+readPractice s = mplus (stripPrefix "[prc_" s) (stripPrefix "[section " s)
+  >>= MIDI.stripSuffix "]"

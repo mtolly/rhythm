@@ -1,14 +1,12 @@
-{-# LANGUAGE ViewPatterns #-}
-{- | The events found in the \"PART VOCAL\", \"HARM1\", \"HARM2\", and
+{-# LANGUAGE ViewPatterns, MultiParamTypeClasses #-}
+{- | The events found in the \"PART VOCALS\", \"HARM1\", \"HARM2\", and
      \"HARM3\" tracks. -}
-module Data.Rhythm.RockBand.Lexer.Vocal where
+module Data.Rhythm.RockBand.Lex.Vocals where
 
 import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.Rhythm.RockBand.Lexer.MIDI as MIDI
-import Data.Rhythm.Types
-
-type Event = TimeEvent Duration Point
+import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import Data.Rhythm.Event
 
 data Point
   -- | An overdrive phrase is simultaneous with a 'Phrase', so the actual length
@@ -24,7 +22,7 @@ data Point
   | PercussionAnimation PercussionType Bool
   deriving (Eq, Ord, Show, Read)
 
-data Duration
+data Long
   -- | General phrase marker (RB3) or Player 1 phrases (pre-RB3).
   = Phrase
   -- | Pre-RB3, used for 2nd player phrases in Tug of War.
@@ -34,6 +32,9 @@ data Duration
   | Note V.Pitch
   deriving (Eq, Ord, Show)
 
+instance Duration Long Point
+type T = Event Long Point
+
 data PercussionType
   = Tambourine
   | Cowbell
@@ -41,15 +42,15 @@ data PercussionType
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 -- | Designed only for duration format, not switch format.
-readEvent :: MIDI.Event dur -> Maybe [Event dur]
-readEvent (Duration len (MIDI.Note _ p _)) = case V.fromPitch p of
-  0 -> Just [Duration len RangeShift]
+readEvent :: MIDI.T dur -> Maybe [T dur]
+readEvent (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+  0 -> Just [Long len RangeShift]
   1 -> Just [Point LyricShift]
-  i | 36 <= i && i <= 84 -> Just [Duration len $ Note p]
+  i | 36 <= i && i <= 84 -> Just [Long len $ Note p]
   96 -> Just [Point Percussion]
   97 -> Just [Point PercussionSound]
-  105 -> Just [Duration len Phrase]
-  106 -> Just [Duration len Phrase2]
+  105 -> Just [Long len Phrase]
+  106 -> Just [Long len Phrase2]
   116 -> Just [Point Overdrive]
   _ -> Nothing
 readEvent (Point (MIDI.Lyric str)) = Just [Point $ Lyric str]
