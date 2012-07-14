@@ -8,6 +8,7 @@ import Control.Monad
 import Data.Rhythm.Event
 import Data.List (stripPrefix)
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import Control.Applicative
 
 data Long
   = Solo
@@ -33,9 +34,9 @@ instance Duration Long Point where
 type T = Event Long Point
 
 data DiffEvent
-  = ForceHopo
+  = Note Fret
+  | ForceHopo
   | ForceStrum
-  | Note Fret
   deriving (Eq, Ord, Show, Read)
 
 data Fret
@@ -71,8 +72,8 @@ data StrumMap
 
 -- | Works with both switch and duration format; a 'Duration' always maps to a
 -- 'Duration' and a 'Point' always maps to a 'Point'.
-readEvent :: MIDI.T t -> Maybe [T t]
-readEvent (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
+fromMIDI :: MIDI.T t -> Maybe [T t]
+fromMIDI (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
   i | 40 <= i && i <= 59 -> Just [Long b (AtFret (GtrFret $ i - 40))]
   i | let (oct, k) = quotRem i 12
     , 5 <= oct && oct <= 8
@@ -95,12 +96,12 @@ readEvent (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
   126 -> Just [Long b Tremolo]
   127 -> Just [Long b Trill]
   _ -> Nothing
-readEvent (Point (MIDI.TextEvent str)) = case str of
+fromMIDI (Point (MIDI.TextEvent str)) = case str of
   (readMood -> Just m) -> Just [Point $ Mood m]
   (readHandMap -> Just hm) -> Just [Point $ HandMap hm]
   (readStrumMap -> Just sm) -> Just [Point $ StrumMap sm]
   _ -> Nothing
-readEvent _ = Nothing
+fromMIDI _ = Nothing
 
 readHandMap :: String -> Maybe HandMap
 readHandMap = stripPrefix "[map HandMap_" >=> \str -> case str of
@@ -116,9 +117,46 @@ readHandMap = stripPrefix "[map HandMap_" >=> \str -> case str of
   "Chord_A]" -> Just ChordA
   _ -> Nothing
 
+showHandMap :: HandMap -> String
+showHandMap HandDefault = "[map HandMap_Default]"
+showHandMap NoChords = "[map HandMap_NoChords]"
+showHandMap AllChords = "[map HandMap_AllChords]"
+showHandMap HandSolo = "[map HandMap_Solo]"
+showHandMap DropD = "[map HandMap_DropD]"
+showHandMap DropD2 = "[map HandMap_DropD2]"
+showHandMap AllBend = "[map HandMap_AllBend]"
+showHandMap ChordC = "[map HandMap_Chord_C]"
+showHandMap ChordD = "[map HandMap_Chord_D]"
+showHandMap ChordA = "[map HandMap_Chord_A]"
+
 readStrumMap :: String -> Maybe StrumMap
 readStrumMap = stripPrefix "[map StrumMap_" >=> \str -> case str of
   "Default]" -> Just StrumDefault
   "Pick]" -> Just Pick
   "SlapBass]" -> Just SlapBass
   _ -> Nothing
+
+showStrumMap :: StrumMap -> String
+showStrumMap StrumDefault = "[map StrumMap_Default]"
+showStrumMap Pick = "[map StrumMap_Pick]"
+showStrumMap SlapBass = "[map StrumMap_SlapBass]"
+
+toMIDI :: T t -> [MIDI.T t]
+toMIDI (Point p) = (:[]) . Point . MIDI.TextEvent $ case p of
+  Mood m -> showMood m
+  HandMap hm -> showHandMap hm
+  StrumMap sm -> showStrumMap sm
+toMIDI (Long len l) = Long len . MIDI.standardNote . V.toPitch <$> case l of
+  Solo -> [103]
+  Tremolo -> [126]
+  Trill -> [127]
+  Overdrive -> [116]
+  BRE -> [120..124]
+  Player1 -> [105]
+  Player2 -> [106]
+  AtFret f -> [fromGtrFret f + 40]
+  DiffEvent diff evt -> case evt of
+    Note f -> [base + fromEnum f]
+    ForceHopo -> [base + 5]
+    ForceStrum -> [base + 6]
+    where base = 60 + 12 * fromEnum diff

@@ -46,6 +46,7 @@ readCrowd = stripPrefix "[crowd_" >=> \rest -> case rest of
   "noclap]"   -> Just $ Clap False
   _           -> Nothing
 
+-- | Supports both pre-RB3 (\"section\") and RB3 (\"prc\") event formats.
 readPractice :: String -> Maybe String
 readPractice s = mplus (stripPrefix "[prc_" s) (stripPrefix "[section " s)
   >>= MIDI.stripSuffix "]"

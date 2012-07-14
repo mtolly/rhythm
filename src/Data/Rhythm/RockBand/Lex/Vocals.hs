@@ -7,12 +7,11 @@ import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
+import Data.Rhythm.Time
+import Data.Char (toLower)
 
 data Point
-  -- | An overdrive phrase is simultaneous with a 'Phrase', so the actual length
-  -- of the overdrive note doesn't need to be recorded.
-  = Overdrive
-  | LyricShift
+  = LyricShift
   | Mood Mood
   | Lyric String
   -- | A playable percussion note.
@@ -27,6 +26,7 @@ data Long
   = Phrase
   -- | Pre-RB3, used for 2nd player phrases in Tug of War.
   | Phrase2
+  | Overdrive
   | RangeShift
   -- | Pitches from 36 to 84 are valid.
   | Note V.Pitch
@@ -42,8 +42,8 @@ data PercussionType
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 -- | Designed only for duration format, not switch format.
-readEvent :: MIDI.T dur -> Maybe [T dur]
-readEvent (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+fromMIDI :: MIDI.T dur -> Maybe [T dur]
+fromMIDI (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
   0 -> Just [Long len RangeShift]
   1 -> Just [Point LyricShift]
   i | 36 <= i && i <= 84 -> Just [Long len $ Note p]
@@ -51,10 +51,10 @@ readEvent (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
   97 -> Just [Point PercussionSound]
   105 -> Just [Long len Phrase]
   106 -> Just [Long len Phrase2]
-  116 -> Just [Point Overdrive]
+  116 -> Just [Long len Overdrive]
   _ -> Nothing
-readEvent (Point (MIDI.Lyric str)) = Just [Point $ Lyric str]
-readEvent (Point (MIDI.TextEvent str)) = case str of
+fromMIDI (Point (MIDI.Lyric str)) = Just [Point $ Lyric str]
+fromMIDI (Point (MIDI.TextEvent str)) = case str of
   (readPercAnim -> Just evt) -> Just [Point evt]
   (readMood     -> Just md ) -> Just [Point $ Mood md]
   -- HMX often (accidentally?) uses text events for lyrics.
@@ -71,3 +71,22 @@ readPercAnim str = case str of
   "[clap_end]" -> f Clap False
   _ -> Nothing
   where f typ b = Just $ PercussionAnimation typ b
+
+showPercAnim :: PercussionType -> Bool -> String
+showPercAnim typ b =
+  "[" ++ map toLower (show typ) ++ if b then "_start]" else "_end]"
+
+toMIDI :: T Beats -> MIDI.T Beats
+toMIDI (Point p) = case p of
+  LyricShift -> MIDI.blip $ V.toPitch 1
+  Mood m -> Point $ MIDI.TextEvent $ showMood m
+  Lyric str -> Point $ MIDI.Lyric str
+  Percussion -> MIDI.blip $ V.toPitch 96
+  PercussionSound -> MIDI.blip $ V.toPitch 97
+  PercussionAnimation typ b -> Point $ MIDI.TextEvent $ showPercAnim typ b
+toMIDI (Long len l) = Long len $ MIDI.standardNote $ case l of
+  Overdrive -> V.toPitch 116
+  Phrase -> V.toPitch 105
+  Phrase2 -> V.toPitch 106
+  RangeShift -> V.toPitch 0
+  Note p -> p

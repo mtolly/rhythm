@@ -87,8 +87,8 @@ data Hit = SoftHit | HardHit deriving (Eq, Ord, Show, Read, Enum, Bounded)
 data Hand = LH | RH deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 -- | Designed only for duration format, not switch format.
-readEvent :: (NNC.C t) => MIDI.T t -> Maybe [T t]
-readEvent (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+fromMIDI :: (NNC.C t) => MIDI.T t -> Maybe [T t]
+fromMIDI (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
 
   -- Animation
   24 -> Just [Point $ Animation KickRF]
@@ -154,13 +154,13 @@ readEvent (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
   
   _ -> Nothing
 
-readEvent (Point (MIDI.TextEvent str)) = case str of
+fromMIDI (Point (MIDI.TextEvent str)) = case str of
   (readMix -> Just p) -> Just [Point p]
   (readMood -> Just m) -> Just [Point $ Mood m]
   "[ride_side_true]" -> Just [Point $ Animation $ RideSide True]
   "[ride_side_false]" -> Just [Point $ Animation $ RideSide False]
   _ -> Nothing
-readEvent _ = Nothing
+fromMIDI _ = Nothing
 
 -- | Tries to interpret a string as an audio mix event.
 readMix :: String -> Maybe Point
@@ -181,15 +181,15 @@ readMix str
   | otherwise = Nothing
   -- Pattern guards: they're pretty cool
 
-showEvent :: T Beats -> [MIDI.T Beats]
-showEvent (Point p) = case p of
-  Animation anim -> [showAnimation anim]
+toMIDI :: T Beats -> [MIDI.T Beats]
+toMIDI (Point p) = case p of
+  Animation anim -> [animationToMIDI anim]
   Mood m -> [Point $ MIDI.TextEvent $ showMood m]
   DiffEvent diff ev -> case ev of
     Mix aud dsc -> [Point $ MIDI.TextEvent $ showMix diff aud dsc]
     Note drm ->
       [MIDI.blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm]
-showEvent (Long len d) = case d of
+toMIDI (Long len d) = case d of
   HihatOpen -> [dlen 25]
   Toms drm -> [dlen $ 108 + fromEnum drm]
   Solo -> [dlen 103]
@@ -212,8 +212,8 @@ showMix diff aud dsc = "[mix " ++ x ++ " drums" ++ y ++ z ++ "]" where
     EasyMix -> "easy"
     EasyNoKick -> "easynokick"
 
-showAnimation :: Animation -> MIDI.T Beats
-showAnimation anim = case anim of
+animationToMIDI :: Animation -> MIDI.T Beats
+animationToMIDI anim = case anim of
   KickRF -> blip 24
   -- HihatOpen (25) is Long
   Snare HardHit LH -> blip 26

@@ -40,6 +40,13 @@ fromMIDI (E.MetaEvent (M.TextEvent str)) = Just $ Point $ TextEvent str
 fromMIDI (E.MetaEvent (M.Lyric str)) = Just $ Point $ Lyric str
 fromMIDI _ = Nothing
 
+toMIDI :: T Bool -> E.T
+toMIDI (Long b (Note c p v)) =
+  E.MIDIEvent $ C.Cons c $ C.Voice $ (if b then V.NoteOff else V.NoteOn) p v
+toMIDI (Point p) = E.MetaEvent $ case p of
+  TextEvent str -> M.TextEvent str
+  Lyric str -> M.Lyric str
+
 standardNote :: V.Pitch -> Long
 standardNote p = Note (C.toChannel 0) p (V.toVelocity 96)
 

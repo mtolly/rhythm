@@ -16,12 +16,6 @@ Library
   Exposed-modules:  Data.Rhythm.Time
                     Data.Rhythm.Event
                     
-                    Data.DTA
-                    Data.DTA.Crypt
-                    Data.DTA.Lex
-                    Data.DTA.Parse
-                    Data.DTA.PrettyPrint
-                    
                     Data.Rhythm.FeedBack
                     Data.Rhythm.FeedBack.Lex
                     Data.Rhythm.FeedBack.Parse
