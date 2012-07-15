@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 -- | The contents of the \"PART REAL_KEYS_?\" and \"KEYS_ANIM_?H\" tracks.
 module Data.Rhythm.RockBand.Lex.ProKeys where
 
@@ -7,7 +7,6 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Time
-import Data.List (stripPrefix)
 import qualified Numeric.NonNegative.Class as NNC
 
 instance Duration Long Point
@@ -52,23 +51,17 @@ fromMIDI (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
   126 -> Just [Long len Glissando]
   127 -> Just [Long len Trill]
   _ -> Nothing
-fromMIDI (Point (MIDI.TextEvent str)) = case str of
-  (readMood -> Just m) -> Just [Point $ Mood m]
-  (stripPrefix "[begin_key song_trainer_key_" -> Just (reads -> [(n, "]")]))
-    -> Just [Point $ Trainer $ TrainerBegin n]
-  (stripPrefix "[end_key song_trainer_key_" -> Just (reads -> [(n, "]")]))
-    -> Just [Point $ Trainer $ TrainerEnd n]
-  _ -> Nothing
+fromMIDI (Point (MIDI.TextEvent str)) = case readMood str of
+  Just m -> Just [Point $ Mood m]
+  _ -> case readTrainer str of
+    Just (t, "key") -> Just [Point $ Trainer t]
+    _ -> Nothing
 fromMIDI _ = Nothing
 
 toMIDI :: T Beats -> MIDI.T Beats
 toMIDI (Point p) = case p of
   LaneShift rng -> MIDI.blip $ V.toPitch $ [0, 2, 4, 5, 7, 9] !! fromEnum rng
-  Trainer t -> Point $ MIDI.TextEvent $ case t of
-    TrainerBegin n -> "[begin_key song_trainer_key_" ++ show n ++ "]"
-    TrainerEnd   n -> "[end_key song_trainer_key_"   ++ show n ++ "]"
-    TrainerNorm  n -> "[norm_key song_trainer_key_"  ++ show n ++ "]"
-    -- norm doesn't actually show up in any HMX keys trainer sections
+  Trainer t -> Point $ MIDI.TextEvent $ showTrainer t "key"
   Mood m -> Point $ MIDI.TextEvent $ showMood m
 toMIDI (Long len l) = Long len $ MIDI.standardNote $ case l of
   Solo -> V.toPitch 115

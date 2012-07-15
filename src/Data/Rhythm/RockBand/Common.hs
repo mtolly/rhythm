@@ -1,6 +1,11 @@
 -- | Types which are used across multiple Rock Band instruments.
 module Data.Rhythm.RockBand.Common where
 
+import Control.Monad (guard)
+import Data.Char (isLetter)
+import Control.Applicative ((<|>))
+import Data.List (stripPrefix)
+
 data Difficulty
   = Easy
   | Medium
@@ -45,6 +50,29 @@ data Trainer
   | TrainerNorm Int
   | TrainerEnd Int
   deriving (Eq, Ord, Show, Read)
+
+readTrainer :: String -> Maybe (Trainer, String)
+readTrainer str = readBegin <|> readNorm <|> readEnd where
+  readBegin = stripPrefix "[begin_" str >>= Just . span isLetter >>= \(x,xs) ->
+    stripPrefix " song_trainer_" xs >>= Just . span isLetter >>= \(y,ys) ->
+      guard (x == y) >> stripPrefix "_" ys >>= \zs -> case reads zs of
+        [(n, "]")] -> Just (TrainerBegin n, x)
+        _ -> Nothing
+  readNorm = stripPrefix "[" str >>= Just . span isLetter >>= \(x,xs) ->
+    stripPrefix "_norm song_trainer_" xs >>= Just . span isLetter >>= \(y,ys) ->
+      guard (x == y) >> stripPrefix "_" ys >>= \zs -> case reads zs of
+        [(n, "]")] -> Just (TrainerBegin n, x)
+        _ -> Nothing
+  readEnd = stripPrefix "[end_" str >>= Just . span isLetter >>= \(x,xs) ->
+    stripPrefix " song_trainer_" xs >>= Just . span isLetter >>= \(y,ys) ->
+      guard (x == y) >> stripPrefix "_" ys >>= \zs -> case reads zs of
+        [(n, "]")] -> Just (TrainerBegin n, x)
+        _ -> Nothing
+
+showTrainer :: Trainer -> String -> String
+showTrainer (TrainerBegin n) inst = "[begin_" ++ inst ++ " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
+showTrainer (TrainerEnd n) inst = "[end_" ++ inst ++ " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
+showTrainer (TrainerNorm n) inst = "[" ++ inst ++ "_norm song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
 
 newtype GtrFret = GtrFret { fromGtrFret :: Int }
   deriving (Eq, Ord, Show, Read)

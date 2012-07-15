@@ -35,7 +35,7 @@ type T = Event Long Point
 
 data DiffEvent
   = Note Fret
-  | ForceHopo
+  | ForceHOPO
   | ForceStrum
   deriving (Eq, Ord, Show, Read)
 
@@ -80,7 +80,7 @@ fromMIDI (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
     , 0 <= k && k <= 6
     , let diff = toEnum $ oct - 5
           evt = case k of
-            5 -> ForceHopo
+            5 -> ForceHOPO
             6 -> ForceStrum
             _ -> Note (toEnum k)
     -> Just [Long b (DiffEvent diff evt)]
@@ -157,6 +157,6 @@ toMIDI (Long len l) = Long len . MIDI.standardNote . V.toPitch <$> case l of
   AtFret f -> [fromGtrFret f + 40]
   DiffEvent diff evt -> case evt of
     Note f -> [base + fromEnum f]
-    ForceHopo -> [base + 5]
+    ForceHOPO -> [base + 5]
     ForceStrum -> [base + 6]
     where base = 60 + 12 * fromEnum diff
