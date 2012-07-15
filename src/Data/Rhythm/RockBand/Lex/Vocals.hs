@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, MultiParamTypeClasses #-}
+{-# LANGUAGE ViewPatterns, MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}
 {- | The events found in the \"PART VOCALS\", \"HARM1\", \"HARM2\", and
      \"HARM3\" tracks. -}
 module Data.Rhythm.RockBand.Lex.Vocals where
@@ -8,6 +8,8 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Time
+import Data.Rhythm.Interpret
+import qualified Numeric.NonNegative.Class as NNC
 import Data.Char (toLower)
 
 data Point
@@ -41,25 +43,38 @@ data PercussionType
   | Clap
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
--- | Designed only for duration format, not switch format.
-fromMIDI :: MIDI.T dur -> Maybe [T dur]
-fromMIDI (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
-  0 -> Just [Long len RangeShift]
-  1 -> Just [Point LyricShift]
-  i | 36 <= i && i <= 84 -> Just [Long len $ Note p]
-  96 -> Just [Point Percussion]
-  97 -> Just [Point PercussionSound]
-  105 -> Just [Long len Phrase]
-  106 -> Just [Long len Phrase2]
-  116 -> Just [Long len Overdrive]
-  _ -> Nothing
-fromMIDI (Point (MIDI.Lyric str)) = Just [Point $ Lyric str]
-fromMIDI (Point (MIDI.TextEvent str)) = case str of
-  (readPercAnim -> Just evt) -> Just [Point evt]
-  (readMood     -> Just md ) -> Just [Point $ Mood md]
-  -- HMX often (accidentally?) uses text events for lyrics.
-  -- They appear to work in-game nonetheless.
-  _ -> Just [Point $ Lyric str]
+instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
+  interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+    0 -> ok $ Long len RangeShift
+    1 -> ok $ Point LyricShift
+    i | 36 <= i && i <= 84 -> ok $ Long len $ Note p
+    96 -> ok $ Point Percussion
+    97 -> ok $ Point PercussionSound
+    105 -> ok $ Long len Phrase
+    106 -> ok $ Long len Phrase2
+    116 -> ok $ Long len Overdrive
+    _ -> Nothing
+  interpret (Point (MIDI.Lyric str)) = ok $ Point $ Lyric str
+  interpret (Point (MIDI.TextEvent str)) = case str of
+    (readPercAnim -> Just evt) -> ok $ Point evt
+    (readMood     -> Just m  ) -> ok $ Point $ Mood m
+    _ -> Just ([Point $ Lyric str], [warning]) where
+      warning = "Unrecognized text \"" ++ show str ++ "\" treated as lyric"
+
+instance Interpret (T Beats) (MIDI.T Beats) where
+  interpret (Point p) = ok $ case p of
+    LyricShift -> MIDI.blip $ V.toPitch 1
+    Mood m -> Point $ MIDI.TextEvent $ showMood m
+    Lyric str -> Point $ MIDI.Lyric str
+    Percussion -> MIDI.blip $ V.toPitch 96
+    PercussionSound -> MIDI.blip $ V.toPitch 97
+    PercussionAnimation t b -> Point $ MIDI.TextEvent $ showPercAnim t b
+  interpret (Long len l) = ok $ Long len $ MIDI.standardNote $ case l of
+    Overdrive -> V.toPitch 116
+    Phrase -> V.toPitch 105
+    Phrase2 -> V.toPitch 106
+    RangeShift -> V.toPitch 0
+    Note p -> p
 
 readPercAnim :: String -> Maybe Point
 readPercAnim str = case str of
@@ -75,18 +90,3 @@ readPercAnim str = case str of
 showPercAnim :: PercussionType -> Bool -> String
 showPercAnim typ b =
   "[" ++ map toLower (show typ) ++ if b then "_start]" else "_end]"
-
-toMIDI :: T Beats -> MIDI.T Beats
-toMIDI (Point p) = case p of
-  LyricShift -> MIDI.blip $ V.toPitch 1
-  Mood m -> Point $ MIDI.TextEvent $ showMood m
-  Lyric str -> Point $ MIDI.Lyric str
-  Percussion -> MIDI.blip $ V.toPitch 96
-  PercussionSound -> MIDI.blip $ V.toPitch 97
-  PercussionAnimation typ b -> Point $ MIDI.TextEvent $ showPercAnim typ b
-toMIDI (Long len l) = Long len $ MIDI.standardNote $ case l of
-  Overdrive -> V.toPitch 116
-  Phrase -> V.toPitch 105
-  Phrase2 -> V.toPitch 106
-  RangeShift -> V.toPitch 0
-  Note p -> p

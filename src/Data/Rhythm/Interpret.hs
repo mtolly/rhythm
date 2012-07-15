@@ -18,5 +18,8 @@ interpretEvents :: (Interpret a b, NNC.C t) =>
   RTB.T t a -> (RTB.T t b, RTB.T t String, RTB.T t a)
 interpretEvents evts = case RTB.partitionMaybe interpret evts of
   (out, bad) -> (good, warns, bad) where
-    good = RTB.flatten $ fmap fst out
+    good  = RTB.flatten $ fmap fst out
     warns = RTB.flatten $ fmap snd out
+
+ok :: a -> Maybe ([a], [b])
+ok x = Just ([x], [])
