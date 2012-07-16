@@ -21,6 +21,8 @@ Library
                     Data.Rhythm.FeedBack.Lex
                     Data.Rhythm.FeedBack.Parse
                     Data.Rhythm.FeedBack.Show
+                    
+                    Data.Rhythm.MIDI
 
                     Data.Rhythm.RockBand.Common
                     

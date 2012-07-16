@@ -1,4 +1,5 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ViewPatterns, MultiParamTypeClasses,
+    TypeSynonymInstances, FlexibleInstances #-}
 -- | The contents of the \"PART REAL_KEYS_?\" and \"KEYS_ANIM_?H\" tracks.
 module Data.Rhythm.RockBand.Lex.ProKeys where
 
@@ -8,6 +9,7 @@ import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Time
 import qualified Numeric.NonNegative.Class as NNC
+import Data.Rhythm.Interpret
 
 instance Duration Long Point
 type T = Event Long Point
@@ -35,38 +37,36 @@ data Long
 data LaneRange = C | D | E | F | G | A
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
--- | For duration format, not switch format.
-fromMIDI :: (NNC.C t) => MIDI.T t -> Maybe [T t]
-fromMIDI (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
-  0 -> Just [Point $ LaneShift C]
-  2 -> Just [Point $ LaneShift D]
-  4 -> Just [Point $ LaneShift E]
-  5 -> Just [Point $ LaneShift F]
-  7 -> Just [Point $ LaneShift G]
-  9 -> Just [Point $ LaneShift A]
-  i | 48 <= i && i <= 72 -> Just [Long len (Note p)]
-  115 -> Just [Long len Solo]
-  116 -> Just [Long len Overdrive]
-  120 -> Just [Long len BRE]
-  126 -> Just [Long len Glissando]
-  127 -> Just [Long len Trill]
-  _ -> Nothing
-fromMIDI (Point (MIDI.TextEvent str)) = case readMood str of
-  Just m -> Just [Point $ Mood m]
-  _ -> case readTrainer str of
-    Just (t, "key") -> Just [Point $ Trainer t]
+instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
+  interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+    0 -> ok $ Point $ LaneShift C
+    2 -> ok $ Point $ LaneShift D
+    4 -> ok $ Point $ LaneShift E
+    5 -> ok $ Point $ LaneShift F
+    7 -> ok $ Point $ LaneShift G
+    9 -> ok $ Point $ LaneShift A
+    i | 48 <= i && i <= 72 -> ok $ Long len $ Note p
+    115 -> ok $ Long len Solo
+    116 -> ok $ Long len Overdrive
+    120 -> ok $ Long len BRE
+    126 -> ok $ Long len Glissando
+    127 -> ok $ Long len Trill
     _ -> Nothing
-fromMIDI _ = Nothing
+  interpret (Point (MIDI.TextEvent str)) = case str of
+    (readMood -> Just m) -> ok $ Point $ Mood m
+    (readTrainer -> Just (t, "key")) -> ok $ Point $ Trainer t
+    _ -> Nothing
+  interpret _ = Nothing
 
-toMIDI :: T Beats -> MIDI.T Beats
-toMIDI (Point p) = case p of
-  LaneShift rng -> MIDI.blip $ V.toPitch $ [0, 2, 4, 5, 7, 9] !! fromEnum rng
-  Trainer t -> Point $ MIDI.TextEvent $ showTrainer t "key"
-  Mood m -> Point $ MIDI.TextEvent $ showMood m
-toMIDI (Long len l) = Long len $ MIDI.standardNote $ case l of
-  Solo -> V.toPitch 115
-  Glissando -> V.toPitch 126
-  Trill -> V.toPitch 127
-  Overdrive -> V.toPitch 116
-  BRE -> V.toPitch 120
-  Note p -> p
+instance Interpret (T Beats) (MIDI.T Beats) where
+  interpret (Point p) = ok $ case p of
+    LaneShift rng -> MIDI.blip $ V.toPitch $ [0, 2, 4, 5, 7, 9] !! fromEnum rng
+    Trainer t -> Point $ MIDI.TextEvent $ showTrainer t "key"
+    Mood m -> Point $ MIDI.TextEvent $ showMood m
+  interpret (Long len l) = ok $ Long len $ MIDI.standardNote $ case l of
+    Solo -> V.toPitch 115
+    Glissando -> V.toPitch 126
+    Trill -> V.toPitch 127
+    Overdrive -> V.toPitch 116
+    BRE -> V.toPitch 120
+    Note p -> p

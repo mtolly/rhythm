@@ -22,4 +22,7 @@ interpretEvents evts = case RTB.partitionMaybe interpret evts of
     warns = RTB.flatten $ fmap snd out
 
 ok :: a -> Maybe ([a], [b])
-ok x = Just ([x], [])
+ok x = okList [x]
+
+okList :: [a] -> Maybe ([a], [b])
+okList xs = Just (xs, [])

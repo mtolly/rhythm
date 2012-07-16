@@ -1,4 +1,5 @@
-{-# LANGUAGE ViewPatterns, PatternGuards, MultiParamTypeClasses #-}
+{-# LANGUAGE ViewPatterns, PatternGuards, MultiParamTypeClasses,
+    FlexibleInstances, TypeSynonymInstances #-}
 -- | The contents of the \"PART GUITAR\/BASS\/KEYS\" tracks.
 module Data.Rhythm.RockBand.Lex.Basic where
 
@@ -8,7 +9,8 @@ import Control.Monad
 import Data.Rhythm.Event
 import Data.List (stripPrefix)
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
-import Control.Applicative
+import Control.Applicative ((<$>))
+import Data.Rhythm.Interpret
 
 data Long
   = Solo
@@ -70,38 +72,36 @@ data StrumMap
   | SlapBass
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
--- | Works with both switch and duration format; a 'Duration' always maps to a
--- 'Duration' and a 'Point' always maps to a 'Point'.
-fromMIDI :: MIDI.T t -> Maybe [T t]
-fromMIDI (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
-  i | 40 <= i && i <= 59 -> Just [Long b (AtFret (GtrFret $ i - 40))]
-  i | let (oct, k) = quotRem i 12
-    , 5 <= oct && oct <= 8
-    , 0 <= k && k <= 6
-    , let diff = toEnum $ oct - 5
-          evt = case k of
-            5 -> ForceHOPO
-            6 -> ForceStrum
-            _ -> Note (toEnum k)
-    -> Just [Long b (DiffEvent diff evt)]
-  103 -> Just [Long b Solo]
-  105 -> Just [Long b Player1]
-  106 -> Just [Long b Player2]
-  116 -> Just [Long b Overdrive]
-  120 -> Just [Long b BRE]
-  121 -> Just []
-  122 -> Just []
-  123 -> Just []
-  124 -> Just []
-  126 -> Just [Long b Tremolo]
-  127 -> Just [Long b Trill]
-  _ -> Nothing
-fromMIDI (Point (MIDI.TextEvent str)) = case str of
-  (readMood -> Just m) -> Just [Point $ Mood m]
-  (readHandMap -> Just hm) -> Just [Point $ HandMap hm]
-  (readStrumMap -> Just sm) -> Just [Point $ StrumMap sm]
-  _ -> Nothing
-fromMIDI _ = Nothing
+instance Interpret (MIDI.T a) (T a) where
+  interpret (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
+    i | 40 <= i && i <= 59 -> ok $ Long b $ AtFret $ GtrFret $ i - 40
+    i | let (oct, k) = quotRem i 12
+      , 5 <= oct && oct <= 8
+      , 0 <= k && k <= 6
+      , let diff = toEnum $ oct - 5
+            evt = case k of
+              5 -> ForceHOPO
+              6 -> ForceStrum
+              _ -> Note (toEnum k)
+      -> ok $ Long b $ DiffEvent diff evt
+    103 -> ok $ Long b Solo
+    105 -> ok $ Long b Player1
+    106 -> ok $ Long b Player2
+    116 -> ok $ Long b Overdrive
+    120 -> ok $ Long b BRE
+    121 -> okList []
+    122 -> okList []
+    123 -> okList []
+    124 -> okList []
+    126 -> ok $ Long b Tremolo
+    127 -> ok $ Long b Trill
+    _ -> Nothing
+  interpret (Point (MIDI.TextEvent str)) = case str of
+    (readMood -> Just m) -> ok $ Point $ Mood m
+    (readHandMap -> Just hm) -> ok $ Point $ HandMap hm
+    (readStrumMap -> Just sm) -> ok $ Point $ StrumMap sm
+    _ -> Nothing
+  interpret _ = Nothing
 
 readHandMap :: String -> Maybe HandMap
 readHandMap = stripPrefix "[map HandMap_" >=> \str -> case str of
@@ -141,22 +141,23 @@ showStrumMap StrumDefault = "[map StrumMap_Default]"
 showStrumMap Pick = "[map StrumMap_Pick]"
 showStrumMap SlapBass = "[map StrumMap_SlapBass]"
 
-toMIDI :: T t -> [MIDI.T t]
-toMIDI (Point p) = (:[]) . Point . MIDI.TextEvent $ case p of
-  Mood m -> showMood m
-  HandMap hm -> showHandMap hm
-  StrumMap sm -> showStrumMap sm
-toMIDI (Long len l) = Long len . MIDI.standardNote . V.toPitch <$> case l of
-  Solo -> [103]
-  Tremolo -> [126]
-  Trill -> [127]
-  Overdrive -> [116]
-  BRE -> [120..124]
-  Player1 -> [105]
-  Player2 -> [106]
-  AtFret f -> [fromGtrFret f + 40]
-  DiffEvent diff evt -> case evt of
-    Note f -> [base + fromEnum f]
-    ForceHOPO -> [base + 5]
-    ForceStrum -> [base + 6]
-    where base = 60 + 12 * fromEnum diff
+instance Interpret (T t) (MIDI.T t) where
+  interpret (Point p) = ok . Point . MIDI.TextEvent $ case p of
+    Mood m -> showMood m
+    HandMap hm -> showHandMap hm
+    StrumMap sm -> showStrumMap sm
+  interpret (Long len l) = okList $ Long len . MIDI.standardNote . V.toPitch <$>
+    case l of
+      Solo -> [103]
+      Tremolo -> [126]
+      Trill -> [127]
+      Overdrive -> [116]
+      BRE -> [120..124]
+      Player1 -> [105]
+      Player2 -> [106]
+      AtFret f -> [fromGtrFret f + 40]
+      DiffEvent diff evt -> [60 + 12 * fromEnum diff + offset] where
+        offset = case evt of
+          Note f -> fromEnum f
+          ForceHOPO -> 5
+          ForceStrum -> 6

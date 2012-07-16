@@ -1,4 +1,5 @@
-{-# LANGUAGE ViewPatterns, MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE ViewPatterns, MultiParamTypeClasses,
+    TypeSynonymInstances, FlexibleInstances #-}
 {- | The events found in the \"PART VOCALS\", \"HARM1\", \"HARM2\", and
      \"HARM3\" tracks. -}
 module Data.Rhythm.RockBand.Lex.Vocals where

@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, ViewPatterns, MultiParamTypeClasses #-}
+{-# LANGUAGE PatternGuards, ViewPatterns, MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}
 -- | The contents of the \"PART DRUMS\" track.
 module Data.Rhythm.RockBand.Lex.Drums where
 
@@ -7,6 +7,7 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Time
 import Data.Rhythm.Event
+import Data.Rhythm.Interpret
 import Data.List (stripPrefix)
 import qualified Numeric.NonNegative.Class as NNC
 
@@ -86,81 +87,70 @@ data Hit = SoftHit | HardHit deriving (Eq, Ord, Show, Read, Enum, Bounded)
 -- | Used in 'Animation' events to control which hand hits a drum.
 data Hand = LH | RH deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
--- | Designed only for duration format, not switch format.
-fromMIDI :: (NNC.C t) => MIDI.T t -> Maybe [T t]
-fromMIDI (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+instance (NNC.C a) => Interpret (MIDI.T a) Animation where
+  interpret (Long _ (MIDI.Note _ p _)) = case V.fromPitch p of
+    24 -> ok KickRF
+    26 -> ok $ Snare HardHit LH
+    27 -> ok $ Snare HardHit RH
+    28 -> ok $ Snare SoftHit LH
+    29 -> ok $ Snare SoftHit RH
+    30 -> ok $ Hihat LH
+    31 -> ok $ Hihat RH
+    32 -> ok $ PercussionRH
+    -- 33 unused
+    34 -> ok $ Crash1 HardHit LH
+    35 -> ok $ Crash1 SoftHit LH
+    36 -> ok $ Crash1 HardHit RH
+    37 -> ok $ Crash1 SoftHit RH
+    38 -> ok $ Crash2 HardHit RH
+    39 -> ok $ Crash2 SoftHit RH
+    40 -> ok $ Crash1RHChokeLH
+    41 -> ok $ Crash2RHChokeLH
+    42 -> ok $ Ride RH
+    43 -> ok $ Ride LH
+    44 -> ok $ Crash2 HardHit LH
+    45 -> ok $ Crash2 SoftHit LH
+    46 -> ok $ Tom1 LH
+    47 -> ok $ Tom1 RH
+    48 -> ok $ Tom2 LH
+    49 -> ok $ Tom2 RH
+    50 -> ok $ FloorTom LH
+    51 -> ok $ FloorTom RH
+    _  -> Nothing
+  interpret _ = Nothing
 
-  -- Animation
-  24 -> Just [Point $ Animation KickRF]
-  25 -> Just [Long len HihatOpen]
-  26 -> Just [Point $ Animation $ Snare HardHit LH]
-  27 -> Just [Point $ Animation $ Snare HardHit RH]
-  28 -> Just [Point $ Animation $ Snare SoftHit LH]
-  29 -> Just [Point $ Animation $ Snare SoftHit RH]
-  30 -> Just [Point $ Animation $ Hihat LH]
-  31 -> Just [Point $ Animation $ Hihat RH]
-  32 -> Just [Point $ Animation PercussionRH]
-  -- 33 unused
-  34 -> Just [Point $ Animation $ Crash1 HardHit LH]
-  35 -> Just [Point $ Animation $ Crash1 SoftHit LH]
-  36 -> Just [Point $ Animation $ Crash1 HardHit RH]
-  37 -> Just [Point $ Animation $ Crash1 SoftHit RH]
-  38 -> Just [Point $ Animation $ Crash2 HardHit RH]
-  39 -> Just [Point $ Animation $ Crash2 SoftHit RH]
-  40 -> Just [Point $ Animation Crash1RHChokeLH]
-  41 -> Just [Point $ Animation Crash2RHChokeLH]
-  42 -> Just [Point $ Animation $ Ride RH]
-  43 -> Just [Point $ Animation $ Ride LH]
-  44 -> Just [Point $ Animation $ Crash2 HardHit LH]
-  45 -> Just [Point $ Animation $ Crash2 SoftHit LH]
-  46 -> Just [Point $ Animation $ Tom1 LH]
-  47 -> Just [Point $ Animation $ Tom1 RH]
-  48 -> Just [Point $ Animation $ Tom2 LH]
-  49 -> Just [Point $ Animation $ Tom2 RH]
-  50 -> Just [Point $ Animation $ FloorTom LH]
-  51 -> Just [Point $ Animation $ FloorTom RH]
-
-  -- Notes
-  i | let (oct, k) = quotRem i 12
-    , 5 <= oct && oct <= 8
-    , 0 <= k && k <= 4
-    -> Just [Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k]
-
-  -- Drum solo
-  103 -> Just [Long len Solo]
-  
-  -- Tug of War phrases
-  105 -> Just [Long len Player1]
-  106 -> Just [Long len Player2]
-
-  -- Toms markers
-  110 -> Just [Long len $ Toms Yellow]
-  111 -> Just [Long len $ Toms Blue]
-  112 -> Just [Long len $ Toms Green]
-  
-  -- Overdrive phrases
-  116 -> Just [Long len Overdrive]
-  
-  -- Activation fills / BRE
-  120 -> Just [Long len Activation]
-  121 -> Just []
-  122 -> Just []
-  123 -> Just []
-  124 -> Just []
-  
-  -- Rolls
-  126 -> Just [Long len SingleRoll]
-  127 -> Just [Long len DoubleRoll]
-  
-  _ -> Nothing
-
-fromMIDI (Point (MIDI.TextEvent str)) = case str of
-  (readMix -> Just p) -> Just [Point p]
-  (readMood -> Just m) -> Just [Point $ Mood m]
-  "[ride_side_true]" -> Just [Point $ Animation $ RideSide True]
-  "[ride_side_false]" -> Just [Point $ Animation $ RideSide False]
-  _ -> Nothing
-fromMIDI _ = Nothing
+instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
+  interpret (interpret -> Just (anims, warns)) =
+    Just (map (Point . Animation) anims, warns)
+  interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+    25 -> ok $ Long len HihatOpen
+    -- Notes
+    i | let (oct, k) = quotRem i 12
+      , 5 <= oct && oct <= 8
+      , 0 <= k && k <= 4
+      -> ok $ Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k
+    103 -> ok $ Long len Solo
+    105 -> ok $ Long len Player1
+    106 -> ok $ Long len Player2
+    110 -> ok $ Long len $ Toms Yellow
+    111 -> ok $ Long len $ Toms Blue
+    112 -> ok $ Long len $ Toms Green
+    116 -> ok $ Long len Overdrive
+    120 -> ok $ Long len Activation
+    121 -> okList []
+    122 -> okList []
+    123 -> okList []
+    124 -> okList []
+    126 -> ok $ Long len SingleRoll
+    127 -> ok $ Long len DoubleRoll
+    _ -> Nothing
+  interpret (Point (MIDI.TextEvent str)) = case str of
+    (readMix -> Just p) -> ok $ Point p
+    (readMood -> Just m) -> ok $ Point $ Mood m
+    "[ride_side_true]" -> ok $ Point $ Animation $ RideSide True
+    "[ride_side_false]" -> ok $ Point $ Animation $ RideSide False
+    _ -> Nothing
+  interpret _ = Nothing
 
 -- | Tries to interpret a string as an audio mix event.
 readMix :: String -> Maybe Point
@@ -181,25 +171,59 @@ readMix str
   | otherwise = Nothing
   -- Pattern guards: they're pretty cool
 
-toMIDI :: T Beats -> [MIDI.T Beats]
-toMIDI (Point p) = case p of
-  Animation anim -> [animationToMIDI anim]
-  Mood m -> [Point $ MIDI.TextEvent $ showMood m]
-  DiffEvent diff ev -> case ev of
-    Mix aud dsc -> [Point $ MIDI.TextEvent $ showMix diff aud dsc]
-    Note drm ->
-      [MIDI.blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm]
-toMIDI (Long len d) = case d of
-  HihatOpen -> [dlen 25]
-  Toms drm -> [dlen $ 108 + fromEnum drm]
-  Solo -> [dlen 103]
-  Player1 -> [dlen 105]
-  Player2 -> [dlen 106]
-  Overdrive -> [dlen 116]
-  Activation -> map dlen [120..124]
-  SingleRoll -> [dlen 126]
-  DoubleRoll -> [dlen 127]
-  where dlen = Long len . MIDI.standardNote . V.toPitch
+instance Interpret (T Beats) (MIDI.T Beats) where
+  interpret (Point p) = case p of
+    Animation anim -> interpret anim
+    Mood m -> ok $ Point $ MIDI.TextEvent $ showMood m
+    DiffEvent diff ev -> ok $ case ev of
+      Mix aud dsc -> Point $ MIDI.TextEvent $ showMix diff aud dsc
+      Note drm ->
+        MIDI.blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm
+  interpret (Long len d) = okList $ case d of
+    HihatOpen -> [dlen 25]
+    Toms drm -> [dlen $ 108 + fromEnum drm]
+    Solo -> [dlen 103]
+    Player1 -> [dlen 105]
+    Player2 -> [dlen 106]
+    Overdrive -> [dlen 116]
+    Activation -> map dlen [120..124]
+    SingleRoll -> [dlen 126]
+    DoubleRoll -> [dlen 127]
+    where dlen = Long len . MIDI.standardNote . V.toPitch
+
+instance Interpret Animation (MIDI.T Beats) where
+  interpret anim = ok $ case anim of
+    KickRF -> blip 24
+    -- HihatOpen (25) is not an Animation
+    Snare HardHit LH -> blip 26
+    Snare HardHit RH -> blip 27
+    Snare SoftHit LH -> blip 28
+    Snare SoftHit RH -> blip 29
+    Hihat LH -> blip 30
+    Hihat RH -> blip 31
+    PercussionRH -> blip 32
+    -- 33 unused
+    Crash1 HardHit LH -> blip 34
+    Crash1 SoftHit LH -> blip 35
+    Crash1 HardHit RH -> blip 36
+    Crash1 SoftHit RH -> blip 37
+    Crash2 HardHit RH -> blip 38
+    Crash2 SoftHit RH -> blip 39
+    Crash1RHChokeLH -> blip 40
+    Crash2RHChokeLH -> blip 41
+    Ride RH -> blip 42
+    Ride LH -> blip 43
+    Crash2 HardHit LH -> blip 44
+    Crash2 SoftHit LH -> blip 45
+    Tom1 LH -> blip 46
+    Tom1 RH -> blip 47
+    Tom2 LH -> blip 48
+    Tom2 RH -> blip 49
+    FloorTom LH -> blip 50
+    FloorTom RH -> blip 51
+    RideSide True -> Point $ MIDI.TextEvent "[ride_side_true]"
+    RideSide False -> Point $ MIDI.TextEvent "[ride_side_false]"
+    where blip = MIDI.blip . V.toPitch
 
 showMix :: Difficulty -> Audio -> Disco -> String
 showMix diff aud dsc = "[mix " ++ x ++ " drums" ++ y ++ z ++ "]" where
@@ -211,37 +235,3 @@ showMix diff aud dsc = "[mix " ++ x ++ " drums" ++ y ++ z ++ "]" where
     DiscoNoFlip -> "dnoflip"
     EasyMix -> "easy"
     EasyNoKick -> "easynokick"
-
-animationToMIDI :: Animation -> MIDI.T Beats
-animationToMIDI anim = case anim of
-  KickRF -> blip 24
-  -- HihatOpen (25) is Long
-  Snare HardHit LH -> blip 26
-  Snare HardHit RH -> blip 27
-  Snare SoftHit LH -> blip 28
-  Snare SoftHit RH -> blip 29
-  Hihat LH -> blip 30
-  Hihat RH -> blip 31
-  PercussionRH -> blip 32
-  -- 33 unused
-  Crash1 HardHit LH -> blip 34
-  Crash1 SoftHit LH -> blip 35
-  Crash1 HardHit RH -> blip 36
-  Crash1 SoftHit RH -> blip 37
-  Crash2 HardHit RH -> blip 38
-  Crash2 SoftHit RH -> blip 39
-  Crash1RHChokeLH -> blip 40
-  Crash2RHChokeLH -> blip 41
-  Ride RH -> blip 42
-  Ride LH -> blip 43
-  Crash2 HardHit LH -> blip 44
-  Crash2 SoftHit LH -> blip 45
-  Tom1 LH -> blip 46
-  Tom1 RH -> blip 47
-  Tom2 LH -> blip 48
-  Tom2 RH -> blip 49
-  FloorTom LH -> blip 50
-  FloorTom RH -> blip 51
-  RideSide True -> Point $ MIDI.TextEvent "[ride_side_true]"
-  RideSide False -> Point $ MIDI.TextEvent "[ride_side_false]"
-  where blip = MIDI.blip . V.toPitch
