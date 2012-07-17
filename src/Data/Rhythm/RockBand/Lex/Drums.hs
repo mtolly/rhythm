@@ -10,6 +10,7 @@ import Data.Rhythm.Event
 import Data.Rhythm.Interpret
 import Data.List (stripPrefix)
 import qualified Numeric.NonNegative.Class as NNC
+import Control.Applicative
 
 data Long
   = Toms Drum -- ^ Change 'Yellow', 'Blue', and 'Green' cymbal notes to toms.
@@ -89,68 +90,66 @@ data Hand = LH | RH deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 instance (NNC.C a) => Interpret (MIDI.T a) Animation where
   interpret (Long _ (MIDI.Note _ p _)) = case V.fromPitch p of
-    24 -> ok KickRF
-    26 -> ok $ Snare HardHit LH
-    27 -> ok $ Snare HardHit RH
-    28 -> ok $ Snare SoftHit LH
-    29 -> ok $ Snare SoftHit RH
-    30 -> ok $ Hihat LH
-    31 -> ok $ Hihat RH
-    32 -> ok $ PercussionRH
+    24 -> single KickRF
+    26 -> single $ Snare HardHit LH
+    27 -> single $ Snare HardHit RH
+    28 -> single $ Snare SoftHit LH
+    29 -> single $ Snare SoftHit RH
+    30 -> single $ Hihat LH
+    31 -> single $ Hihat RH
+    32 -> single $ PercussionRH
     -- 33 unused
-    34 -> ok $ Crash1 HardHit LH
-    35 -> ok $ Crash1 SoftHit LH
-    36 -> ok $ Crash1 HardHit RH
-    37 -> ok $ Crash1 SoftHit RH
-    38 -> ok $ Crash2 HardHit RH
-    39 -> ok $ Crash2 SoftHit RH
-    40 -> ok $ Crash1RHChokeLH
-    41 -> ok $ Crash2RHChokeLH
-    42 -> ok $ Ride RH
-    43 -> ok $ Ride LH
-    44 -> ok $ Crash2 HardHit LH
-    45 -> ok $ Crash2 SoftHit LH
-    46 -> ok $ Tom1 LH
-    47 -> ok $ Tom1 RH
-    48 -> ok $ Tom2 LH
-    49 -> ok $ Tom2 RH
-    50 -> ok $ FloorTom LH
-    51 -> ok $ FloorTom RH
-    _  -> Nothing
-  interpret _ = Nothing
+    34 -> single $ Crash1 HardHit LH
+    35 -> single $ Crash1 SoftHit LH
+    36 -> single $ Crash1 HardHit RH
+    37 -> single $ Crash1 SoftHit RH
+    38 -> single $ Crash2 HardHit RH
+    39 -> single $ Crash2 SoftHit RH
+    40 -> single $ Crash1RHChokeLH
+    41 -> single $ Crash2RHChokeLH
+    42 -> single $ Ride RH
+    43 -> single $ Ride LH
+    44 -> single $ Crash2 HardHit LH
+    45 -> single $ Crash2 SoftHit LH
+    46 -> single $ Tom1 LH
+    47 -> single $ Tom1 RH
+    48 -> single $ Tom2 LH
+    49 -> single $ Tom2 RH
+    50 -> single $ FloorTom LH
+    51 -> single $ FloorTom RH
+    _  -> none
+  interpret _ = none
 
 instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
-  interpret (interpret -> Just (anims, warns)) =
-    Just (map (Point . Animation) anims, warns)
   interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
-    25 -> ok $ Long len HihatOpen
+    25 -> single $ Long len HihatOpen
     -- Notes
     i | let (oct, k) = quotRem i 12
       , 5 <= oct && oct <= 8
       , 0 <= k && k <= 4
-      -> ok $ Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k
-    103 -> ok $ Long len Solo
-    105 -> ok $ Long len Player1
-    106 -> ok $ Long len Player2
-    110 -> ok $ Long len $ Toms Yellow
-    111 -> ok $ Long len $ Toms Blue
-    112 -> ok $ Long len $ Toms Green
-    116 -> ok $ Long len Overdrive
-    120 -> ok $ Long len Activation
-    121 -> okList []
-    122 -> okList []
-    123 -> okList []
-    124 -> okList []
-    126 -> ok $ Long len SingleRoll
-    127 -> ok $ Long len DoubleRoll
-    _ -> Nothing
+      -> single $ Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k
+    103 -> single $ Long len Solo
+    105 -> single $ Long len Player1
+    106 -> single $ Long len Player2
+    110 -> single $ Long len $ Toms Yellow
+    111 -> single $ Long len $ Toms Blue
+    112 -> single $ Long len $ Toms Green
+    116 -> single $ Long len Overdrive
+    120 -> single $ Long len Activation
+    121 -> return []
+    122 -> return []
+    123 -> return []
+    124 -> return []
+    126 -> single $ Long len SingleRoll
+    127 -> single $ Long len DoubleRoll
+    _ -> none
   interpret (Point (MIDI.TextEvent str)) = case str of
-    (readMix -> Just p) -> ok $ Point p
-    (readMood -> Just m) -> ok $ Point $ Mood m
-    "[ride_side_true]" -> ok $ Point $ Animation $ RideSide True
-    "[ride_side_false]" -> ok $ Point $ Animation $ RideSide False
-    _ -> Nothing
-  interpret _ = Nothing
+    (readMix -> Just p) -> single $ Point p
+    (readMood -> Just m) -> single $ Point $ Mood m
+    "[ride_side_true]" -> single $ Point $ Animation $ RideSide True
+    "[ride_side_false]" -> single $ Point $ Animation $ RideSide False
+    _ -> none
+  interpret x = map (Point . Animation) <$> interpret x
 
 -- | Tries to interpret a string as an audio mix event.
 readMix :: String -> Maybe Point
@@ -174,12 +173,12 @@ readMix str
 instance Interpret (T Beats) (MIDI.T Beats) where
   interpret (Point p) = case p of
     Animation anim -> interpret anim
-    Mood m -> ok $ Point $ MIDI.TextEvent $ showMood m
-    DiffEvent diff ev -> ok $ case ev of
+    Mood m -> single $ Point $ MIDI.TextEvent $ showMood m
+    DiffEvent diff ev -> single $ case ev of
       Mix aud dsc -> Point $ MIDI.TextEvent $ showMix diff aud dsc
       Note drm ->
         MIDI.blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm
-  interpret (Long len d) = okList $ case d of
+  interpret (Long len d) = return $ case d of
     HihatOpen -> [dlen 25]
     Toms drm -> [dlen $ 108 + fromEnum drm]
     Solo -> [dlen 103]
@@ -192,7 +191,7 @@ instance Interpret (T Beats) (MIDI.T Beats) where
     where dlen = Long len . MIDI.standardNote . V.toPitch
 
 instance Interpret Animation (MIDI.T Beats) where
-  interpret anim = ok $ case anim of
+  interpret anim = single $ case anim of
     KickRF -> blip 24
     -- HihatOpen (25) is not an Animation
     Snare HardHit LH -> blip 26

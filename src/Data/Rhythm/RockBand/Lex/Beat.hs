@@ -16,10 +16,10 @@ data T
 
 instance (NNC.C a) => Interpret (MIDI.T a) T where
   interpret (Long _ (MIDI.Note _ p _)) = case V.fromPitch p of
-    12 -> ok Bar
-    13 -> ok Beat
-    _ -> Nothing
-  interpret _ = Nothing
+    12 -> single Bar
+    13 -> single Beat
+    _ -> none
+  interpret _ = none
 
 instance Interpret T (MIDI.T Beats) where
-  interpret b = ok $ MIDI.blip $ V.toPitch $ case b of Bar -> 12; Beat -> 13
+  interpret b = single $ MIDI.blip $ V.toPitch $ case b of Bar -> 12; Beat -> 13

@@ -28,15 +28,15 @@ type T = Event Long Point
 
 instance Interpret E.T (T Bool) where
   interpret (E.MIDIEvent (C.Cons c (C.Voice v))) = case V.explicitNoteOff v of
-    V.NoteOff p vel -> ok $ Long False $ Note c p vel
-    V.NoteOn p vel -> ok $ Long True $ Note c p vel
-    _ -> Nothing
-  interpret (E.MetaEvent (M.TextEvent str)) = ok $ Point $ TextEvent str
-  interpret (E.MetaEvent (M.Lyric str)) = ok $ Point $ Lyric str
-  interpret _ = Nothing
+    V.NoteOff p vel -> single $ Long False $ Note c p vel
+    V.NoteOn p vel -> single $ Long True $ Note c p vel
+    _ -> none
+  interpret (E.MetaEvent (M.TextEvent str)) = single $ Point $ TextEvent str
+  interpret (E.MetaEvent (M.Lyric str)) = single $ Point $ Lyric str
+  interpret _ = none
 
 instance Interpret (T Bool) E.T where
-  interpret evt = ok $ case evt of
+  interpret evt = single $ case evt of
     Long b (Note c p v) -> E.MIDIEvent $ C.Cons c $ C.Voice $
       (if b then V.NoteOff else V.NoteOn) p v
     Point p -> E.MetaEvent $ case p of

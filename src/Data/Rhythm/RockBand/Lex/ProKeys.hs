@@ -39,31 +39,31 @@ data LaneRange = C | D | E | F | G | A
 
 instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
   interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
-    0 -> ok $ Point $ LaneShift C
-    2 -> ok $ Point $ LaneShift D
-    4 -> ok $ Point $ LaneShift E
-    5 -> ok $ Point $ LaneShift F
-    7 -> ok $ Point $ LaneShift G
-    9 -> ok $ Point $ LaneShift A
-    i | 48 <= i && i <= 72 -> ok $ Long len $ Note p
-    115 -> ok $ Long len Solo
-    116 -> ok $ Long len Overdrive
-    120 -> ok $ Long len BRE
-    126 -> ok $ Long len Glissando
-    127 -> ok $ Long len Trill
-    _ -> Nothing
+    0 -> single $ Point $ LaneShift C
+    2 -> single $ Point $ LaneShift D
+    4 -> single $ Point $ LaneShift E
+    5 -> single $ Point $ LaneShift F
+    7 -> single $ Point $ LaneShift G
+    9 -> single $ Point $ LaneShift A
+    i | 48 <= i && i <= 72 -> single $ Long len $ Note p
+    115 -> single $ Long len Solo
+    116 -> single $ Long len Overdrive
+    120 -> single $ Long len BRE
+    126 -> single $ Long len Glissando
+    127 -> single $ Long len Trill
+    _ -> none
   interpret (Point (MIDI.TextEvent str)) = case str of
-    (readMood -> Just m) -> ok $ Point $ Mood m
-    (readTrainer -> Just (t, "key")) -> ok $ Point $ Trainer t
-    _ -> Nothing
-  interpret _ = Nothing
+    (readMood -> Just m) -> single $ Point $ Mood m
+    (readTrainer -> Just (t, "key")) -> single $ Point $ Trainer t
+    _ -> none
+  interpret _ = none
 
 instance Interpret (T Beats) (MIDI.T Beats) where
-  interpret (Point p) = ok $ case p of
+  interpret (Point p) = single $ case p of
     LaneShift rng -> MIDI.blip $ V.toPitch $ [0, 2, 4, 5, 7, 9] !! fromEnum rng
     Trainer t -> Point $ MIDI.TextEvent $ showTrainer t "key"
     Mood m -> Point $ MIDI.TextEvent $ showMood m
-  interpret (Long len l) = ok $ Long len $ MIDI.standardNote $ case l of
+  interpret (Long len l) = single $ Long len $ MIDI.standardNote $ case l of
     Solo -> V.toPitch 115
     Glissando -> V.toPitch 126
     Trill -> V.toPitch 127

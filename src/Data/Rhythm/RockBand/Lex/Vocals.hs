@@ -46,31 +46,31 @@ data PercussionType
 
 instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
   interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
-    0 -> ok $ Long len RangeShift
-    1 -> ok $ Point LyricShift
-    i | 36 <= i && i <= 84 -> ok $ Long len $ Note p
-    96 -> ok $ Point Percussion
-    97 -> ok $ Point PercussionSound
-    105 -> ok $ Long len Phrase
-    106 -> ok $ Long len Phrase2
-    116 -> ok $ Long len Overdrive
-    _ -> Nothing
-  interpret (Point (MIDI.Lyric str)) = ok $ Point $ Lyric str
+    0 -> single $ Long len RangeShift
+    1 -> single $ Point LyricShift
+    i | 36 <= i && i <= 84 -> single $ Long len $ Note p
+    96 -> single $ Point Percussion
+    97 -> single $ Point PercussionSound
+    105 -> single $ Long len Phrase
+    106 -> single $ Long len Phrase2
+    116 -> single $ Long len Overdrive
+    _ -> none
+  interpret (Point (MIDI.Lyric str)) = single $ Point $ Lyric str
   interpret (Point (MIDI.TextEvent str)) = case str of
-    (readPercAnim -> Just evt) -> ok $ Point evt
-    (readMood     -> Just m  ) -> ok $ Point $ Mood m
-    _ -> Just ([Point $ Lyric str], [warning]) where
-      warning = "Unrecognized text \"" ++ show str ++ "\" treated as lyric"
+    (readPercAnim -> Just evt) -> single $ Point evt
+    (readMood     -> Just m  ) -> single $ Point $ Mood m
+    _ -> warn w >> single (Point $ Lyric str) where
+      w = "Unrecognized text \"" ++ show str ++ "\" treated as lyric"
 
 instance Interpret (T Beats) (MIDI.T Beats) where
-  interpret (Point p) = ok $ case p of
+  interpret (Point p) = single $ case p of
     LyricShift -> MIDI.blip $ V.toPitch 1
     Mood m -> Point $ MIDI.TextEvent $ showMood m
     Lyric str -> Point $ MIDI.Lyric str
     Percussion -> MIDI.blip $ V.toPitch 96
     PercussionSound -> MIDI.blip $ V.toPitch 97
     PercussionAnimation t b -> Point $ MIDI.TextEvent $ showPercAnim t b
-  interpret (Long len l) = ok $ Long len $ MIDI.standardNote $ case l of
+  interpret (Long len l) = single $ Long len $ MIDI.standardNote $ case l of
     Overdrive -> V.toPitch 116
     Phrase -> V.toPitch 105
     Phrase2 -> V.toPitch 106

@@ -74,7 +74,7 @@ data StrumMap
 
 instance Interpret (MIDI.T a) (T a) where
   interpret (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
-    i | 40 <= i && i <= 59 -> ok $ Long b $ AtFret $ GtrFret $ i - 40
+    i | 40 <= i && i <= 59 -> single $ Long b $ AtFret $ GtrFret $ i - 40
     i | let (oct, k) = quotRem i 12
       , 5 <= oct && oct <= 8
       , 0 <= k && k <= 6
@@ -82,26 +82,26 @@ instance Interpret (MIDI.T a) (T a) where
             evt = case k of
               5 -> ForceHOPO
               6 -> ForceStrum
-              _ -> Note (toEnum k)
-      -> ok $ Long b $ DiffEvent diff evt
-    103 -> ok $ Long b Solo
-    105 -> ok $ Long b Player1
-    106 -> ok $ Long b Player2
-    116 -> ok $ Long b Overdrive
-    120 -> ok $ Long b BRE
-    121 -> okList []
-    122 -> okList []
-    123 -> okList []
-    124 -> okList []
-    126 -> ok $ Long b Tremolo
-    127 -> ok $ Long b Trill
-    _ -> Nothing
+              _ -> Note $ toEnum k
+      -> single $ Long b $ DiffEvent diff evt
+    103 -> single $ Long b Solo
+    105 -> single $ Long b Player1
+    106 -> single $ Long b Player2
+    116 -> single $ Long b Overdrive
+    120 -> single $ Long b BRE
+    121 -> return []
+    122 -> return []
+    123 -> return []
+    124 -> return []
+    126 -> single $ Long b Tremolo
+    127 -> single $ Long b Trill
+    _ -> none
   interpret (Point (MIDI.TextEvent str)) = case str of
-    (readMood -> Just m) -> ok $ Point $ Mood m
-    (readHandMap -> Just hm) -> ok $ Point $ HandMap hm
-    (readStrumMap -> Just sm) -> ok $ Point $ StrumMap sm
-    _ -> Nothing
-  interpret _ = Nothing
+    (readMood -> Just m) -> single $ Point $ Mood m
+    (readHandMap -> Just hm) -> single $ Point $ HandMap hm
+    (readStrumMap -> Just sm) -> single $ Point $ StrumMap sm
+    _ -> none
+  interpret _ = none
 
 readHandMap :: String -> Maybe HandMap
 readHandMap = stripPrefix "[map HandMap_" >=> \str -> case str of
@@ -142,11 +142,11 @@ showStrumMap Pick = "[map StrumMap_Pick]"
 showStrumMap SlapBass = "[map StrumMap_SlapBass]"
 
 instance Interpret (T t) (MIDI.T t) where
-  interpret (Point p) = ok . Point . MIDI.TextEvent $ case p of
+  interpret (Point p) = single . Point . MIDI.TextEvent $ case p of
     Mood m -> showMood m
     HandMap hm -> showHandMap hm
     StrumMap sm -> showStrumMap sm
-  interpret (Long len l) = okList $ Long len . MIDI.standardNote . V.toPitch <$>
+  interpret (Long len l) = return $ Long len . MIDI.standardNote . V.toPitch <$>
     case l of
       Solo -> [103]
       Tremolo -> [126]

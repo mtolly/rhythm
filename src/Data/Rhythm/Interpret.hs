@@ -10,19 +10,24 @@ module Data.Rhythm.Interpret where
 
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Numeric.NonNegative.Class as NNC
+import Control.Monad.Trans.Writer
+import Control.Monad.Trans.Class
 
 class Interpret a b where
-  interpret :: a -> Maybe ([b], [String])
+  interpret :: a -> WriterT [String] Maybe [b]
 
 interpretEvents :: (Interpret a b, NNC.C t) =>
   RTB.T t a -> (RTB.T t b, RTB.T t String, RTB.T t a)
-interpretEvents evts = case RTB.partitionMaybe interpret evts of
+interpretEvents evts = case RTB.partitionMaybe (runWriterT . interpret) evts of
   (out, bad) -> (good, warns, bad) where
     good  = RTB.flatten $ fmap fst out
     warns = RTB.flatten $ fmap snd out
 
-ok :: a -> Maybe ([a], [b])
-ok x = okList [x]
+warn :: (Monad m) => w -> WriterT [w] m ()
+warn x = tell [x]
 
-okList :: [a] -> Maybe ([a], [b])
-okList xs = Just (xs, [])
+single :: a -> WriterT [w] Maybe [a]
+single x = return [x]
+
+none :: WriterT [w] Maybe a
+none = lift Nothing
