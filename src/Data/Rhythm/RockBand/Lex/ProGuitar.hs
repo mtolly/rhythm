@@ -10,6 +10,8 @@ import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
 import qualified Numeric.NonNegative.Class as NNC
+import Data.Char (isSpace)
+import Data.List (stripPrefix)
 
 data GtrString = S6 | S5 | S4 | S3 | S2 | S1
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
@@ -22,6 +24,8 @@ data Point
   | TrainerBass Trainer
   | HandPosition GtrFret
   | ChordRoot V.Pitch -- ^ Valid pitches are 4 (E) to 15 (D#).
+  | ChordName Difficulty String
+  | UnknownPitch18 C.Channel V.Velocity
   deriving (Eq, Ord, Show)
 
 data Long
@@ -33,7 +37,7 @@ data Long
   | NoChordNames
   | SlashChords
   | DiffEvent Difficulty DiffEvent
-  deriving (Eq, Ord, Show, Read)
+  deriving (Eq, Ord, Show)
 
 data DiffEvent
   = Note GtrString GtrFret NoteType
@@ -41,10 +45,10 @@ data DiffEvent
   | Slide SlideType
   | Arpeggio
   | PartialChord StrumArea
-  | UnknownBFlat
+  | UnknownBFlat C.Channel V.Velocity
   | AllFrets
   -- ChordName String
-  deriving (Eq, Ord, Show, Read)
+  deriving (Eq, Ord, Show)
 
 data NoteType
   = NormalNote
@@ -67,13 +71,14 @@ instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
     i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
     16 -> single $ Long len SlashChords
     17 -> single $ Long len NoChordNames
+    18 -> single $ Point $ UnknownPitch18 ch vel
     i | let (oct, k) = quotRem i 12
       , elem oct [2,4,6,8]
       , let longDiff = Long len . DiffEvent (toEnum $ quot oct 2 - 1)
       -> case k of
         6 -> single $ longDiff ForceHOPO
         7 -> case C.fromChannel ch of
-          1   -> single $ longDiff $ Slide NormalSlide
+          0   -> single $ longDiff $ Slide NormalSlide
           11  -> single $ longDiff $ Slide ReversedSlide
           ch' -> warn w >> single (longDiff $ Slide NormalSlide) where
             w = "Slide marker (pitch " ++ show i ++ ") has unknown channel " ++ show ch'
@@ -84,7 +89,7 @@ instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
           15 -> single $ longDiff $ PartialChord Low
           ch'  -> warn w >> single (longDiff $ PartialChord Mid) where
             w = "Partial chord marker (pitch " ++ show i ++ ") has unknown channel " ++ show ch'
-        10 -> single $ longDiff $ UnknownBFlat
+        10 -> single $ longDiff $ UnknownBFlat ch vel
         11 -> single $ longDiff AllFrets
         _ -> single $ longDiff $ Note nstr nfret ntyp where
           nstr = toEnum k
@@ -105,5 +110,16 @@ instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
   interpret (Point (MIDI.TextEvent str)) = case readTrainer str of
     Just (t, "pg") -> single $ Point $ TrainerGtr t
     Just (t, "pb") -> single $ Point $ TrainerBass t
-    _ -> none
+    _ -> case readChordName str of
+      Nothing -> none
+      Just (diff, name) -> single $ Point $ ChordName diff name
   interpret _ = none
+
+readChordName :: String -> Maybe (Difficulty, String)
+readChordName str
+  | Just (x:xs) <- stripPrefix "[chrd" str
+  , elem x "0123"
+  , let diff = toEnum $ read [x]
+  , Just name <- MIDI.stripSuffix "]" $ dropWhile isSpace xs
+  = Just (diff, name)
+  | otherwise = Nothing

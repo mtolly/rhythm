@@ -121,7 +121,7 @@ instance (NNC.C a) => Interpret (MIDI.T a) Animation where
   interpret _ = none
 
 instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
-  interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+  interpret l@(Long len (MIDI.Note _ p _)) = case V.fromPitch p of
     25 -> single $ Long len HihatOpen
     -- Notes
     i | let (oct, k) = quotRem i 12
@@ -142,14 +142,14 @@ instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
     124 -> return []
     126 -> single $ Long len SingleRoll
     127 -> single $ Long len DoubleRoll
-    _ -> none
+    _ -> map (Point . Animation) <$> interpret l
   interpret (Point (MIDI.TextEvent str)) = case str of
     (readMix -> Just p) -> single $ Point p
     (readMood -> Just m) -> single $ Point $ Mood m
     "[ride_side_true]" -> single $ Point $ Animation $ RideSide True
     "[ride_side_false]" -> single $ Point $ Animation $ RideSide False
     _ -> none
-  interpret x = map (Point . Animation) <$> interpret x
+  interpret _ = none
 
 -- | Tries to interpret a string as an audio mix event.
 readMix :: String -> Maybe Point
