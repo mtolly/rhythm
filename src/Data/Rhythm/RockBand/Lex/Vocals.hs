@@ -60,7 +60,7 @@ instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
     (readPercAnim -> Just evt) -> single $ Point evt
     (readMood     -> Just m  ) -> single $ Point $ Mood m
     _ -> warn w >> single (Point $ Lyric str) where
-      w = "Unrecognized text \"" ++ show str ++ "\" treated as lyric"
+      w = "Unrecognized text " ++ show str ++ " treated as lyric"
 
 instance Interpret (T Beats) (MIDI.T Beats) where
   interpret (Point p) = single $ case p of

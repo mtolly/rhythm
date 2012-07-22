@@ -97,7 +97,7 @@ instance (NNC.C a) => Interpret (MIDI.T a) Animation where
     29 -> single $ Snare SoftHit RH
     30 -> single $ Hihat LH
     31 -> single $ Hihat RH
-    32 -> single $ PercussionRH
+    32 -> single PercussionRH
     -- 33 unused
     34 -> single $ Crash1 HardHit LH
     35 -> single $ Crash1 SoftHit LH
@@ -105,8 +105,8 @@ instance (NNC.C a) => Interpret (MIDI.T a) Animation where
     37 -> single $ Crash1 SoftHit RH
     38 -> single $ Crash2 HardHit RH
     39 -> single $ Crash2 SoftHit RH
-    40 -> single $ Crash1RHChokeLH
-    41 -> single $ Crash2RHChokeLH
+    40 -> single Crash1RHChokeLH
+    41 -> single Crash2RHChokeLH
     42 -> single $ Ride RH
     43 -> single $ Ride LH
     44 -> single $ Crash2 HardHit LH
