@@ -17,7 +17,7 @@ module Data.Rhythm.Event where
 import Data.Rhythm.Time
 import qualified Numeric.NonNegative.Class as NNC
 import qualified Data.EventList.Relative.TimeBody as RTB
-import Control.Monad (guard)
+import Control.Monad (guard, (>=>))
 
 -- | A class for types which are split into two subtypes: those that store
 -- \"long\" events (which have duration) and those that store \"point\" events
@@ -47,13 +47,28 @@ lengthToSwitch = rtbJoin . fmap f where
   f (Long dt x) = RTB.fromPairList
     [(NNC.zero, Long True x), (dt, Long False x)]
 
+-- | The first event for which the function gives a Just result is removed
+-- from the list, along with its position.
+extractFirst :: (NNC.C t, Num t) =>
+  (a -> Maybe b) -> RTB.T t a -> Maybe ((t, b), RTB.T t a)
+extractFirst f rtb = RTB.viewL rtb >>= \((dt, x), rest) -> case f x of
+  Just y -> Just ((dt, y), RTB.delay dt rest)
+  Nothing -> extractFirst f rest >>= \((pos, y), rest') ->
+    Just ((dt + pos, y), RTB.cons dt x rest')
+
 -- | Converts from separate on/off events to events that store a length. An
 -- on-event and off-event will be joined according to the 'condense' method of
 -- the 'Long' class.
-switchToLength :: (NNC.C t, Duration l p) =>
+switchToLength :: (NNC.C t, Duration l p, Num t) =>
   RTB.T t (Event l p Bool) -> RTB.T t (Event l p t)
-switchToLength = undefined
-
-quantize :: (NNC.C t, Duration l p) =>
-  t -> RTB.T t (Event l p t) -> RTB.T t (Event l p t)
-quantize = undefined
+switchToLength rtb = case RTB.viewL rtb of
+  Nothing -> RTB.empty
+  Just ((dt, Point p), rest) -> RTB.cons dt (Point p) $ switchToLength rest
+  Just ((dt, Long False _), rest) -> RTB.delay dt $ switchToLength rest
+    -- An end with no start before it is dropped.
+  Just ((dt, Long True x), rest) ->
+    case extractFirst (isEnd >=> condense x) rest of
+      Nothing -> RTB.delay dt $ switchToLength rest
+        -- A start with no end after it is dropped.
+      Just ((pos, y), rest') -> RTB.cons dt (Long pos y) $ switchToLength rest'
+      where isEnd (Long False l) = Just l; isEnd _ = Nothing
