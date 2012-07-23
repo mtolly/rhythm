@@ -17,7 +17,7 @@ import Data.Maybe (fromMaybe)
 
 data StandardMIDI = StandardMIDI
   { tempoTrack :: RTB.T Beats BPM
-  , timeSignatures :: SignatureTrack
+  , signatureTrack :: SignatureTrack
   , otherMeta :: RTB.T Beats M.T
   , tracks :: [(String, RTB.T Beats E.T)]
   } deriving (Eq, Ord, Show)
@@ -69,3 +69,11 @@ toStandardMIDI f = beatTracks f >>= \trks -> Just $ case trks of
   [] -> StandardMIDI RTB.empty RTB.empty RTB.empty []
   (t:ts) -> (splitMetaTrack t) { tracks = map attachName ts } where
     attachName trk = fromMaybe ("", trk) $ getTrackName trk
+
+fromStandardMIDI :: Resolution -> StandardMIDI -> F.T
+fromStandardMIDI res sm = fromBeatTracks res $ allmeta : other where
+  allmeta = fmap E.MetaEvent $ RTB.merge tempo $ RTB.merge sigs $ otherMeta sm
+  tempo = fmap (\bpm -> M.SetTempo $ floor $ recip bpm * 60000) $ tempoTrack sm
+  sigs = fmap undefined $ renderSignatures $ signatureTrack sm
+  -- undefined :: TimeSignature -> M.T
+  other = map (\(name, trk) -> RTB.cons 0 (E.MetaEvent $ M.TrackName name) trk) $ tracks sm

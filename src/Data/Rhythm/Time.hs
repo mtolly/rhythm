@@ -151,12 +151,21 @@ getBeatPosn :: SignatureTrack -> MeasurePosn -> Beats
 getBeatPosn sigs (MeasurePosn m b) =
   b + sum (take (fromIntegral m) (measureLengths sigs))
 
+-- | Drops any time signatures which are not on measure boundaries.
 validSignatures :: RTB.T Beats TimeSignature -> SignatureTrack
 validSignatures = go 4 where
   go :: Beats -> RTB.T Beats TimeSignature -> SignatureTrack
   go cur sigs = case RTB.viewL sigs of
-    Just ((0, sig), rest) -> go (measureLength sig) rest
-    Just _ -> go cur $ undelay cur sigs
+    Just ((0, sig), rest) -> RTB.cons 0 sig $ go (measureLength sig) rest
+    Just _ -> RTB.delay 1 $ go cur $ undelay cur sigs
+    Nothing -> RTB.empty
+
+renderSignatures :: SignatureTrack -> RTB.T Beats TimeSignature
+renderSignatures = go 4 where
+  go :: Beats -> SignatureTrack -> RTB.T Beats TimeSignature
+  go cur sigs = case RTB.viewL sigs of
+    Just ((msrs, sig), rest) ->
+      RTB.cons (cur * fromIntegral msrs) sig $ go (measureLength sig) rest
     Nothing -> RTB.empty
 
 -- | Drops the given amount of time from the event list. Events that are exactly
