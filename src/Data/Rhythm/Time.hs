@@ -150,3 +150,20 @@ getMeasurePosn sigs = go 0 $ measureLengths sigs where
 getBeatPosn :: SignatureTrack -> MeasurePosn -> Beats
 getBeatPosn sigs (MeasurePosn m b) =
   b + sum (take (fromIntegral m) (measureLengths sigs))
+
+validSignatures :: RTB.T Beats TimeSignature -> SignatureTrack
+validSignatures = go 4 where
+  go :: Beats -> RTB.T Beats TimeSignature -> SignatureTrack
+  go cur sigs = case RTB.viewL sigs of
+    Just ((0, sig), rest) -> go (measureLength sig) rest
+    Just _ -> go cur $ undelay cur sigs
+    Nothing -> RTB.empty
+
+-- | Drops the given amount of time from the event list. Events that are exactly
+-- at the new beginning of the list will not be dropped.
+undelay :: (NNC.C t, Num t) => t -> RTB.T t a -> RTB.T t a
+undelay t rtb = case RTB.viewL rtb of
+  Just ((dt, x), rest) -> if dt < t
+    then undelay (t - dt) rest
+    else RTB.cons (dt - t) x rest
+  Nothing -> RTB.empty

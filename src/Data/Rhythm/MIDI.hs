@@ -13,6 +13,7 @@ import Data.Rhythm.Time
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Numeric.NonNegative.Class as NNC
 import Control.Applicative
+import Data.Maybe (fromMaybe)
 
 data StandardMIDI = StandardMIDI
   { tempoTrack :: RTB.T Beats BPM
@@ -35,8 +36,36 @@ fromBeatTracks res trks =
 getTrackName :: (NNC.C t, Num t) => RTB.T t E.T -> Maybe (String, RTB.T t E.T)
 getTrackName rtb = case RTB.viewL rtb of
   Just ((0, evt), rest) -> case evt of
-    E.MetaEvent (M.TrackName str) -> Just $ (str ,) $ case getTrackName rest of
-      Nothing -> rest
-      Just (_, rest') -> rest'
+    E.MetaEvent (M.TrackName str) -> Just $ (str ,) $
+      fromMaybe rest $ snd <$> getTrackName rest
     _ -> fmap (RTB.cons 0 evt) <$> getTrackName rest
   _ -> Nothing
+
+getTrack :: String -> StandardMIDI -> Maybe (RTB.T Beats E.T)
+getTrack str sm = lookup str $ tracks sm
+
+deleteTrack :: String -> StandardMIDI -> StandardMIDI
+deleteTrack str sm = sm { tracks = filter (\(x, _) -> x /= str) $ tracks sm }
+
+-- | From a track of meta events, creates a MIDI file with no other tracks.
+splitMetaTrack :: RTB.T Beats E.T -> StandardMIDI
+splitMetaTrack evts = StandardMIDI tempo (validSignatures tsigs) meta [] where
+  (tempo, evts') = RTB.partitionMaybe getBPM evts
+  (tsigs, evts'') = RTB.partitionMaybe getTSig evts'
+  meta = RTB.mapMaybe getMeta evts''
+  getBPM (E.MetaEvent (M.SetTempo mspqn)) = Just bpm
+    where bpm = recip $ fromIntegral mspqn / 60000
+    -- MIDI tempo is microsecs/quarternote.
+  getBPM _ = Nothing
+  getTSig (E.MetaEvent (M.TimeSig n d _ _)) =
+    Just $ TimeSignature (fromIntegral n) $ 2 ^ (2 - d)
+    -- "d" is neg. power of 2. so d=2 means 2^-2 = qnote. d=3 means 2^-3 = 8th.
+  getTSig _ = Nothing
+  getMeta (E.MetaEvent m) = Just m
+  getMeta _ = Nothing
+
+toStandardMIDI :: F.T -> Maybe StandardMIDI
+toStandardMIDI f = beatTracks f >>= \trks -> Just $ case trks of
+  [] -> StandardMIDI RTB.empty RTB.empty RTB.empty []
+  (t:ts) -> (splitMetaTrack t) { tracks = map attachName ts } where
+    attachName trk = fromMaybe ("", trk) $ getTrackName trk
