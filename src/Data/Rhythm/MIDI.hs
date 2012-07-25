@@ -11,9 +11,11 @@ import qualified Sound.MIDI.File.Event.Meta as M
 -- import qualified Sound.MIDI.Message.Channel.Voice as V
 import Data.Rhythm.Time
 import qualified Data.EventList.Relative.TimeBody as RTB
+import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Numeric.NonNegative.Class as NNC
 import Control.Applicative
 import Data.Maybe (fromMaybe)
+import Data.Ratio
 
 data StandardMIDI = StandardMIDI
   { tempoTrack :: RTB.T Beats BPM
@@ -74,6 +76,22 @@ fromStandardMIDI :: Resolution -> StandardMIDI -> F.T
 fromStandardMIDI res sm = fromBeatTracks res $ allmeta : other where
   allmeta = fmap E.MetaEvent $ RTB.merge tempo $ RTB.merge sigs $ otherMeta sm
   tempo = fmap (\bpm -> M.SetTempo $ floor $ recip bpm * 60000) $ tempoTrack sm
-  sigs = fmap undefined $ renderSignatures $ signatureTrack sm
-  -- undefined :: TimeSignature -> M.T
-  other = map (\(name, trk) -> RTB.cons 0 (E.MetaEvent $ M.TrackName name) trk) $ tracks sm
+  sigs = fmap makeSig $ renderSignatures $ signatureTrack sm
+  makeSig ts = fromMaybe (error sigError) $ toMIDISignature ts
+    where sigError = "Time signature not representable in MIDI: " ++ show ts
+  other = map (\(name, trk) -> RTB.cons 0 (E.MetaEvent $ M.TrackName name) trk)
+    $ tracks sm
+
+toMIDISignature :: TimeSignature -> Maybe M.T
+toMIDISignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
+  \pow -> Just $ M.TimeSig (fromIntegral mult) (2 - fromIntegral pow) 24 8
+  where isPowerOf2 :: Rational -> Maybe Integer
+        isPowerOf2 r
+          | 1 == numerator r = fmap negate $ isPowerOf2' $ denominator r
+          | 1 == denominator r = isPowerOf2' $ numerator r
+          | otherwise = Nothing
+        isPowerOf2' :: Integer -> Maybe Integer
+        isPowerOf2' 1 = Just 0
+        isPowerOf2' n = case quotRem n 2 of
+          (n', 0) -> (+1) <$> isPowerOf2' n'
+          _ -> Nothing
