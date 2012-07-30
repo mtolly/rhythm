@@ -11,7 +11,7 @@ import Data.Rhythm.Time
 import Data.Rhythm.Event
 import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
-import Data.Maybe (listToMaybe)
+import Control.Monad ((>=>))
 
 data Value
   = Int NN.Integer -- ^ Non-negative integer literals, like 0, 8, or 123
@@ -45,5 +45,43 @@ data Point
 instance Duration Long Point
 type T = Event Long Point
 
+fromInt :: Value -> Maybe NN.Integer
+fromInt (Int i) = Just i
+fromInt _ = Nothing
+
+fromReal :: Value -> Maybe Rational
+fromReal (Real r) = Just r
+fromReal _ = Nothing
+
+fromQuoted :: Value -> Maybe String
+fromQuoted (Quoted s) = Just s
+fromQuoted _ = Nothing
+
+fromIdent :: Value -> Maybe String
+fromIdent (Ident s) = Just s
+fromIdent _ = Nothing
+
+getValue :: String -> File a -> Maybe Value
+getValue str = lookup str . songData
+
+setValue :: String -> Value -> File a -> File a
+setValue str val f = f { songData = new } where
+  new = (str, val) : [p | p@(x, _) <- songData f, x /= str]
+
 getResolution :: File a -> Maybe Resolution
-getResolution f = listToMaybe [res | ("Resolution", Int res) <- songData f]
+getResolution = getValue "Resolution" >=> fromInt
+
+setResolution :: Resolution -> File a -> File a
+setResolution = setValue "Resolution" . Int
+
+fileToBeats :: File Ticks -> Maybe (File Beats)
+fileToBeats f = getResolution f >>= \res -> Just $ File
+  { songData = songData f
+  , syncTrack = toBeatTrack' res $ syncTrack f
+  , chunks = [(name, toBeatTrack' res t) | (name, t) <- chunks f] }
+
+fileToTicks :: File Beats -> Maybe (File Ticks)
+fileToTicks f = getResolution f >>= \res -> Just $ File
+  { songData = songData f
+  , syncTrack = toTickTrack' res $ syncTrack f
+  , chunks = [(name, toTickTrack' res t) | (name, t) <- chunks f] }

@@ -72,3 +72,11 @@ switchToLength rtb = case RTB.viewL rtb of
         -- A start with no end after it is dropped.
       Just ((pos, y), rest') -> RTB.cons dt (Long pos y) $ switchToLength rest'
       where isEnd (Long False l) = Just l; isEnd _ = Nothing
+
+toBeatTrack' ::
+  Resolution -> RTB.T Ticks (Event l p Ticks) -> RTB.T Beats (Event l p Beats)
+toBeatTrack' res = toBeatTrack res . fmap (fmap $ toBeats res)
+
+toTickTrack' ::
+  Resolution -> RTB.T Beats (Event l p Beats) -> RTB.T Ticks (Event l p Ticks)
+toTickTrack' res = toTickTrack res . fmap (fmap $ toTicks res)
