@@ -9,7 +9,7 @@ import Data.Rhythm.Time
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
 import Data.List (stripPrefix)
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import Control.Applicative
 
 data Long
@@ -88,7 +88,7 @@ data Hit = SoftHit | HardHit deriving (Eq, Ord, Show, Read, Enum, Bounded)
 -- | Used in 'Animation' events to control which hand hits a drum.
 data Hand = LH | RH deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-instance (NNC.C a) => Interpret (MIDI.T a) Animation where
+instance (NN.C a) => Interpret (MIDI.T a) Animation where
   interpret (Long _ (MIDI.Note _ p _)) = case V.fromPitch p of
     24 -> single KickRF
     26 -> single $ Snare HardHit LH
@@ -120,7 +120,7 @@ instance (NNC.C a) => Interpret (MIDI.T a) Animation where
     _  -> none
   interpret _ = none
 
-instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
+instance (NN.C a) => Interpret (MIDI.T a) (T a) where
   interpret l@(Long len (MIDI.Note _ p _)) = case V.fromPitch p of
     25 -> single $ Long len HihatOpen
     -- Notes

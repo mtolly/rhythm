@@ -9,14 +9,14 @@ or errors.
 module Data.Rhythm.Interpret where
 
 import qualified Data.EventList.Relative.TimeBody as RTB
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import Control.Monad.Trans.Writer
 import Control.Monad.Trans.Class
 
 class Interpret a b where
   interpret :: a -> WriterT [String] Maybe [b]
 
-interpretEvents :: (Interpret a b, NNC.C t) =>
+interpretEvents :: (Interpret a b, NN.C t) =>
   RTB.T t a -> (RTB.T t b, RTB.T t String, RTB.T t a)
 interpretEvents evts = case RTB.partitionMaybe (runWriterT . interpret) evts of
   (out, bad) -> (good, warns, bad) where

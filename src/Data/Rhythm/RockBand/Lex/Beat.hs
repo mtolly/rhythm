@@ -6,7 +6,7 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Time
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import Data.Rhythm.Interpret
 
 data T
@@ -14,7 +14,7 @@ data T
   | Beat -- ^ A thin barline; a beat in the middle of a measure.
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-instance (NNC.C a) => Interpret (MIDI.T a) T where
+instance (NN.C a) => Interpret (MIDI.T a) T where
   interpret (Long _ (MIDI.Note _ p _)) = case V.fromPitch p of
     12 -> single Bar
     13 -> single Beat

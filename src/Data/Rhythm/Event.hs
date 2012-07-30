@@ -15,7 +15,7 @@ you can use the Event type, depending on how it is parametrized.
 module Data.Rhythm.Event where
 
 import Data.Rhythm.Time
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Control.Monad (guard, (>=>))
 
@@ -40,16 +40,16 @@ instance Functor (Event l p) where
 -- | Convert from events that store a length to separate on/off events. Each
 -- duration-event is split into an on-event and an off-event, both with the same
 -- value as the old duration event.
-lengthToSwitch :: (NNC.C t, Duration l p) =>
+lengthToSwitch :: (NN.C t, Duration l p) =>
   RTB.T t (Event l p t) -> RTB.T t (Event l p Bool)
 lengthToSwitch = rtbJoin . fmap f where
-  f (Point x) = RTB.singleton NNC.zero (Point x)
+  f (Point x) = RTB.singleton NN.zero (Point x)
   f (Long dt x) = RTB.fromPairList
-    [(NNC.zero, Long True x), (dt, Long False x)]
+    [(NN.zero, Long True x), (dt, Long False x)]
 
 -- | The first event for which the function gives a Just result is removed
 -- from the list, along with its position.
-extractFirst :: (NNC.C t, Num t) =>
+extractFirst :: (NN.C t, Num t) =>
   (a -> Maybe b) -> RTB.T t a -> Maybe ((t, b), RTB.T t a)
 extractFirst f rtb = RTB.viewL rtb >>= \((dt, x), rest) -> case f x of
   Just y -> Just ((dt, y), RTB.delay dt rest)
@@ -59,7 +59,7 @@ extractFirst f rtb = RTB.viewL rtb >>= \((dt, x), rest) -> case f x of
 -- | Converts from separate on/off events to events that store a length. An
 -- on-event and off-event will be joined according to the 'condense' method of
 -- the 'Long' class.
-switchToLength :: (NNC.C t, Duration l p, Num t) =>
+switchToLength :: (NN.C t, Duration l p, Num t) =>
   RTB.T t (Event l p Bool) -> RTB.T t (Event l p t)
 switchToLength rtb = case RTB.viewL rtb of
   Nothing -> RTB.empty

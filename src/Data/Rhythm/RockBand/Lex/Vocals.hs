@@ -10,7 +10,7 @@ import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Time
 import Data.Rhythm.Interpret
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import Data.Char (toLower)
 
 data Point
@@ -44,7 +44,7 @@ data PercussionType
   | Clap
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
+instance (NN.C a) => Interpret (MIDI.T a) (T a) where
   interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
     0 -> single $ Long len RangeShift
     1 -> single $ Point LyricShift

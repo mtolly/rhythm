@@ -17,7 +17,7 @@ beats, ticks, and seconds.
 module Data.Rhythm.Time where
 
 import qualified Numeric.NonNegative.Wrapper as NN
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Ratio
 
@@ -87,7 +87,7 @@ timeToBeats bpms evts =
 -- | Each event-list is merged into a new list, starting at its position in the
 -- original list. This is equivalent to the monad function join, but the Monad
 -- typeclass can't be used because of typeclass constraints.
-rtbJoin :: (NNC.C t, Ord a) => RTB.T t (RTB.T t a) -> RTB.T t a
+rtbJoin :: (NN.C t, Ord a) => RTB.T t (RTB.T t a) -> RTB.T t a
 rtbJoin rtb = case RTB.viewL rtb of
   Nothing -> RTB.empty
   Just ((dt, x), rtb') -> RTB.delay dt $ RTB.merge x $ rtbJoin rtb'
@@ -170,7 +170,7 @@ renderSignatures = go 4 where
 
 -- | Drops the given amount of time from the event list. Events that are exactly
 -- at the new beginning of the list will not be dropped.
-undelay :: (NNC.C t, Num t) => t -> RTB.T t a -> RTB.T t a
+undelay :: (NN.C t, Num t) => t -> RTB.T t a -> RTB.T t a
 undelay t rtb = case RTB.viewL rtb of
   Just ((dt, x), rest) -> if dt < t
     then undelay (t - dt) rest

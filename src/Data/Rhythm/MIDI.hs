@@ -12,7 +12,7 @@ import qualified Sound.MIDI.File.Event.Meta as M
 import Data.Rhythm.Time
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Numeric.NonNegative.Wrapper as NN
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import Control.Applicative
 import Data.Maybe (fromMaybe)
 import Data.Ratio
@@ -35,7 +35,7 @@ fromBeatTracks res trks =
 
 -- | Looks for a track name event at position 0 in the track. If found, returns
 -- the string, and also the track with any initial track name events removed.
-getTrackName :: (NNC.C t, Num t) => RTB.T t E.T -> Maybe (String, RTB.T t E.T)
+getTrackName :: (NN.C t, Num t) => RTB.T t E.T -> Maybe (String, RTB.T t E.T)
 getTrackName rtb = case RTB.viewL rtb of
   Just ((0, evt), rest) -> case evt of
     E.MetaEvent (M.TrackName str) -> Just $ (str ,) $

@@ -9,9 +9,11 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import Data.Char (isSpace)
-import Data.List (stripPrefix)
+import Data.List (stripPrefix, sort)
+import Data.Maybe (listToMaybe)
+import qualified Data.EventList.Relative.TimeBody as RTB
 
 data GtrString = S6 | S5 | S4 | S3 | S2 | S1
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
@@ -47,7 +49,6 @@ data DiffEvent
   | PartialChord StrumArea
   | UnknownBFlat C.Channel V.Velocity
   | AllFrets
-  -- ChordName String
   deriving (Eq, Ord, Show)
 
 data NoteType
@@ -66,7 +67,7 @@ data SlideType = NormalSlide | ReversedSlide
 data StrumArea = Low | Mid | High
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
+instance (NN.C a) => Interpret (MIDI.T a) (T a) where
   interpret (Long len (MIDI.Note ch p vel)) = case V.fromPitch p of
     i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
     16 -> single $ Long len SlashChords
@@ -123,3 +124,9 @@ readChordName str
   , Just name <- MIDI.stripSuffix "]" $ dropWhile isSpace xs
   = Just (diff, name)
   | otherwise = Nothing
+
+autoHandPosition :: (NN.C t) => RTB.T t DiffEvent -> RTB.T t GtrFret
+autoHandPosition = RTB.mapMaybe getFret . RTB.collectCoincident where
+  getFret :: [DiffEvent] -> Maybe GtrFret
+  getFret evts = listToMaybe $ sort
+    [f | Note _ f _ <- evts, fromGtrFret f /= 0]

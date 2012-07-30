@@ -8,7 +8,7 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Time
-import qualified Numeric.NonNegative.Class as NNC
+import qualified Numeric.NonNegative.Class as NN
 import Data.Rhythm.Interpret
 
 instance Duration Long Point
@@ -37,7 +37,7 @@ data Long
 data LaneRange = C | D | E | F | G | A
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-instance (NNC.C a) => Interpret (MIDI.T a) (T a) where
+instance (NN.C a) => Interpret (MIDI.T a) (T a) where
   interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
     0 -> single $ Point $ LaneShift C
     2 -> single $ Point $ LaneShift D
