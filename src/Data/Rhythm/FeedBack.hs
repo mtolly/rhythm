@@ -20,14 +20,13 @@ data Value
   | Ident String -- ^ Raw identifiers, like TS, rhythm, or Song
   deriving (Eq, Ord, Show)
 
-type SongData = [(String, Value)]
-type Chunk t = RTB.T t (T t)
-
-data File t = File
+data File a = File
   { songData :: SongData
-  , syncTrack :: Chunk t
-  , chunks :: [(String, Chunk t)] }
+  , syncTrack :: Chunk a
+  , chunks :: [(String, Chunk a)] }
   deriving (Eq, Ord, Show)
+type Chunk a = RTB.T a (T a)
+type SongData = [(String, Value)]
 
 data Long
   = Note NN.Integer
@@ -74,14 +73,8 @@ getResolution = getValue "Resolution" >=> fromInt
 setResolution :: Resolution -> File a -> File a
 setResolution = setValue "Resolution" . Int
 
-fileToBeats :: File Ticks -> Maybe (File Beats)
-fileToBeats f = getResolution f >>= \res -> Just $ File
+mapTracks :: (RTB.T a (T a) -> RTB.T b (T b)) -> File a -> File b
+mapTracks g f = File
   { songData = songData f
-  , syncTrack = toBeatTrack' res $ syncTrack f
-  , chunks = [(name, toBeatTrack' res t) | (name, t) <- chunks f] }
-
-fileToTicks :: File Beats -> Maybe (File Ticks)
-fileToTicks f = getResolution f >>= \res -> Just $ File
-  { songData = songData f
-  , syncTrack = toTickTrack' res $ syncTrack f
-  , chunks = [(name, toTickTrack' res t) | (name, t) <- chunks f] }
+  , syncTrack = g $ syncTrack f
+  , chunks = map (fmap g) $ chunks f }

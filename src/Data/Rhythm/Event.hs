@@ -58,7 +58,7 @@ extractFirst f rtb = RTB.viewL rtb >>= \((dt, x), rest) -> case f x of
 
 -- | Converts from separate on/off events to events that store a length. An
 -- on-event and off-event will be joined according to the 'condense' method of
--- the 'Long' class.
+-- the 'Duration' class.
 switchToLength :: (NN.C t, Duration l p, Num t) =>
   RTB.T t (Event l p Bool) -> RTB.T t (Event l p t)
 switchToLength rtb = case RTB.viewL rtb of
@@ -73,10 +73,16 @@ switchToLength rtb = case RTB.viewL rtb of
       Just ((pos, y), rest') -> RTB.cons dt (Long pos y) $ switchToLength rest'
       where isEnd (Long False l) = Just l; isEnd _ = Nothing
 
-toBeatTrack' ::
-  Resolution -> RTB.T Ticks (Event l p Ticks) -> RTB.T Beats (Event l p Beats)
+toBeatTrack' :: Functor f =>
+  Resolution -> RTB.T Ticks (f Ticks) -> RTB.T Beats (f Beats)
 toBeatTrack' res = toBeatTrack res . fmap (fmap $ toBeats res)
 
-toTickTrack' ::
-  Resolution -> RTB.T Beats (Event l p Beats) -> RTB.T Ticks (Event l p Ticks)
+toTickTrack' :: Functor f =>
+  Resolution -> RTB.T Beats (f Beats) -> RTB.T Ticks (f Ticks)
 toTickTrack' res = toTickTrack res . fmap (fmap $ toTicks res)
+
+-- | The smallest resolution needed to represent all event positions and
+-- durations correctly.
+minTrackResolution' :: RTB.T Beats (Event l p Beats) -> Resolution
+minTrackResolution' rtb = minResolution $
+  RTB.getTimes rtb ++ [len | Long len _ <- RTB.getBodies rtb]

@@ -51,10 +51,13 @@ toTickTrack :: Resolution -> RTB.T Beats a -> RTB.T Ticks a
 toTickTrack res = RTB.discretize .
   RTB.mapTime (* (NN.fromNumberUnsafe $ fromIntegral res))
 
--- | Returns the smallest resolution needed to represent all times correctly.
-minResolution :: RTB.T Beats a -> Resolution
-minResolution = NN.fromNumberUnsafe .
-  foldr (lcm . denominator . NN.toNumber) 1 . RTB.getTimes
+-- | The smallest resolution needed to represent all times correctly.
+minResolution :: [Beats] -> Resolution
+minResolution = NN.fromNumberUnsafe . foldr (lcm . denominator . NN.toNumber) 1
+
+-- | The smallest resolution needed to represent all event positions correctly.
+minTrackResolution :: RTB.T Beats a -> Resolution
+minTrackResolution = minResolution . RTB.getTimes
 
 -- | Uses tempos to convert an event-list from beatstamps to timestamps. If no
 -- tempo is present at time 0, 120 BPM is assumed.
