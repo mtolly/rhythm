@@ -125,6 +125,9 @@ readChordName str
   = Just (diff, name)
   | otherwise = Nothing
 
+showChordName :: Difficulty -> String -> String
+showChordName d ch = "[chrd" ++ show (fromEnum d) ++ " " ++ ch ++ "]"
+
 autoHandPosition :: (NN.C t) => RTB.T t DiffEvent -> RTB.T t GtrFret
 autoHandPosition = RTB.mapMaybe getFret . RTB.collectCoincident where
   getFret :: [DiffEvent] -> Maybe GtrFret

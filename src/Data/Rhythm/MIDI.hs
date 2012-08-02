@@ -1,7 +1,6 @@
 -- | A format for type 1 (parallel) MIDI files, encoded with beats/ticks, where
 -- the first track is reserved for tempo and time signature changes, and track
 -- names are stored separately instead of as MIDI events.
-{-# LANGUAGE TupleSections #-}
 module Data.Rhythm.MIDI where
 
 import qualified Sound.MIDI.File as F
@@ -38,8 +37,8 @@ fromBeatTracks res trks =
 getTrackName :: (NN.C t, Num t) => RTB.T t E.T -> Maybe (String, RTB.T t E.T)
 getTrackName rtb = case RTB.viewL rtb of
   Just ((0, evt), rest) -> case evt of
-    E.MetaEvent (M.TrackName str) -> Just $ (str ,) $
-      fromMaybe rest $ snd <$> getTrackName rest
+    E.MetaEvent (M.TrackName str) -> Just
+      (str, fromMaybe rest $ snd <$> getTrackName rest)
     _ -> fmap (RTB.cons 0 evt) <$> getTrackName rest
   _ -> Nothing
 
@@ -86,10 +85,10 @@ toMIDISignature :: TimeSignature -> Maybe M.T
 toMIDISignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
   \pow -> Just $ M.TimeSig (fromIntegral mult) (2 - fromIntegral pow) 24 8
   where isPowerOf2 :: Rational -> Maybe Integer
-        isPowerOf2 r
-          | 1 == numerator r = fmap negate $ isPowerOf2' $ denominator r
-          | 1 == denominator r = isPowerOf2' $ numerator r
-          | otherwise = Nothing
+        isPowerOf2 r = case (numerator r, denominator r) of
+          (1, d) -> negate <$> isPowerOf2' d
+          (n, 1) -> isPowerOf2' n
+          _ -> Nothing
         isPowerOf2' :: Integer -> Maybe Integer
         isPowerOf2' 1 = Just 0
         isPowerOf2' n = case quotRem n 2 of
