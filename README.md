@@ -5,27 +5,21 @@ rhythm
 Hero, Rock Band, etc.) file formats. It is designed to cooperate with the `midi`
 library by heavily making use of the `event-list` and `non-negative` libraries.
 
-The central file is Data.MusicTime, which defines several universal types for
-timekeeping and describing rhythmic elements.
+* Data.Rhythm.Time defines the three basic units for time. A rational number
+holding a position or duration in `Beats` (quarter notes) is the most central.
+Many file formats, for practicality, store such quarter note durations as
+integral numerators (called `Ticks`) of a fixed denominator (called the
+`Resolution`). Finally, objects can also be positioned in real time,
+independent of a tempo, by storing a rational value of `Seconds`.
 
-* There are three basic units for time. A rational number holding a position or
-duration in `Beats` (quarter notes) is the most central. Many file formats, for
-practicality, store such quarter note durations as integral numerators (called
-`Ticks`) of a fixed denominator (called the `Resolution`). Finally, objects can
-also be positioned in real time, independent of a tempo, by storing a rational
-value of `Seconds`.
+* Also in Data.Rhythm.Time, `Tempo`s and `TimeSignature`s are defined in the
+obvious ways, and can be used to convert between the various timekeeping units
+(for example, a `Tempo` can convert positions between `Beats` and `Seconds`).
 
-* `Tempo`s and `TimeSignature`s are defined in the obvious ways, and can be used
-to convert between the various timekeeping units (for example, a `Tempo` can
-convert positions between `Beats` and `Seconds`).
-
-* Many formats read by this library share a common structure: there are events
-that are "instant points" in time (with no duration), and there are events that
-have a beginning and end point (stretching over some duration). The `TimeEvent`
-datatype encapsulates this idea, and can be used to process such events in one
-of two ways. "Duration" format means that a non-instant event is stored as a
-single object, with a duration value attached. "Switch" format means that a
-non-instant event is stored as two separate beginning and end events. MIDI is
-inherently a "Switch" format -- notes are stored as note-on and note-off events.
-FeedBack uses a "Duration" format -- a note is a single event of the form
-`time = N fret len`, where `len` is the length of the note.
+* Many format share a common structure: some events are instant "points" which
+have no duration, and other events have begin and end points. The "Event" type
+encapsulates this idea. It can be used in one of two ways. You can have a list
+of "Event Bool", in which case the on and off events are stored as two separate
+events -- this is how standard MIDI files work. Or, you can have a list of
+"Event a" for some numeric type a, in which case you have a single event which
+directly stores its length -- this is how FeedBack ".chart" files work.
