@@ -28,7 +28,7 @@ data File a = File
 type Chunk a = RTB.T a (T a)
 type SongData = [(String, Value)]
 
-data Long
+data Length
   = Note NN.Integer
   | Stream NN.Integer
   deriving (Eq, Ord, Show)
@@ -41,8 +41,8 @@ data Point
   | EventLocal String
   deriving (Eq, Ord, Show)
 
-instance Duration Long Point
-type T = Event Long Point
+instance Long Length
+type T = Event Length Point
 
 fromInt :: Value -> Maybe NN.Integer
 fromInt (Int i) = Just i

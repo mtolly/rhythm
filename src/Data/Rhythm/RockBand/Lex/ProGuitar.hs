@@ -16,8 +16,8 @@ import Data.Maybe (listToMaybe)
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Rhythm.Guitar.Base
 
-instance Duration Long Point
-type T = Event Long Point
+instance Long Length
+type T = Event Length Point
 
 data Point
   = TrainerGtr Trainer
@@ -28,7 +28,7 @@ data Point
   | UnknownPitch18 C.Channel V.Velocity
   deriving (Eq, Ord, Show)
 
-data Long
+data Length
   = Trill
   | Tremolo
   | BRE
@@ -66,45 +66,45 @@ data StrumArea = Low | Mid | High
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 instance (NN.C a) => Interpret (MIDI.T a) (T a) where
-  interpret (Long len (MIDI.Note ch p vel)) = case V.fromPitch p of
+  interpret (Length len (MIDI.Note ch p vel)) = case V.fromPitch p of
     i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
-    16 -> single $ Long len SlashChords
-    17 -> single $ Long len NoChordNames
+    16 -> single $ Length len SlashChords
+    17 -> single $ Length len NoChordNames
     18 -> single $ Point $ UnknownPitch18 ch vel
     i | let (oct, k) = quotRem i 12
       , elem oct [2,4,6,8]
-      , let longDiff = Long len . DiffEvent (toEnum $ quot oct 2 - 1)
+      , let lengthDiff = Length len . DiffEvent (toEnum $ quot oct 2 - 1)
       -> case k of
-        6 -> single $ longDiff ForceHOPO
+        6 -> single $ lengthDiff ForceHOPO
         7 -> case C.fromChannel ch of
-          0   -> single $ longDiff $ Slide NormalSlide
-          11  -> single $ longDiff $ Slide ReversedSlide
-          ch' -> warn w >> single (longDiff $ Slide NormalSlide) where
+          0   -> single $ lengthDiff $ Slide NormalSlide
+          11  -> single $ lengthDiff $ Slide ReversedSlide
+          ch' -> warn w >> single (lengthDiff $ Slide NormalSlide) where
             w = "Slide marker (pitch " ++ show i ++ ") has unknown channel " ++ show ch'
-        8 -> single $ longDiff Arpeggio
+        8 -> single $ lengthDiff Arpeggio
         9 -> case C.fromChannel ch of
-          13 -> single $ longDiff $ PartialChord High
-          14 -> single $ longDiff $ PartialChord Mid
-          15 -> single $ longDiff $ PartialChord Low
-          ch'  -> warn w >> single (longDiff $ PartialChord Mid) where
+          13 -> single $ lengthDiff $ PartialChord High
+          14 -> single $ lengthDiff $ PartialChord Mid
+          15 -> single $ lengthDiff $ PartialChord Low
+          ch'  -> warn w >> single (lengthDiff $ PartialChord Mid) where
             w = "Partial chord marker (pitch " ++ show i ++ ") has unknown channel " ++ show ch'
-        10 -> single $ longDiff $ UnknownBFlat ch vel
-        11 -> single $ longDiff AllFrets
-        _ -> single $ longDiff $ Note nstr nfret ntyp where
+        10 -> single $ lengthDiff $ UnknownBFlat ch vel
+        11 -> single $ lengthDiff AllFrets
+        _ -> single $ lengthDiff $ Note nstr nfret ntyp where
           nstr = toEnum k
           nfret = V.fromVelocity vel - 100
           ntyp = toEnum $ C.fromChannel ch
     108 -> single $ Point $ HandPosition $ V.fromVelocity vel - 100
-    115 -> single $ Long len Solo
-    116 -> single $ Long len Overdrive
-    120 -> single $ Long len BRE
+    115 -> single $ Length len Solo
+    116 -> single $ Length len Overdrive
+    120 -> single $ Length len BRE
     121 -> return []
     122 -> return []
     123 -> return []
     124 -> return []
     125 -> return []
-    126 -> single $ Long len Tremolo
-    127 -> single $ Long len Trill
+    126 -> single $ Length len Tremolo
+    127 -> single $ Length len Trill
     _ -> none
   interpret (Point (MIDI.TextEvent str)) = case readTrainer str of
     Just (t, "pg") -> single $ Point $ TrainerGtr t

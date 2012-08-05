@@ -11,8 +11,8 @@ import Data.Rhythm.Time
 import qualified Numeric.NonNegative.Class as NN
 import Data.Rhythm.Interpret
 
-instance Duration Long Point
-type T = Event Long Point
+instance Long Length
+type T = Event Length Point
 
 data Point
   {- | Change the viewable play range. Should be placed at least a measure
@@ -23,7 +23,7 @@ data Point
   | Mood Mood
   deriving (Eq, Ord, Show)
 
-data Long
+data Length
   = Solo -- ^ A keyboard solo section.
   | Glissando -- ^ Place over a sequence of white notes for a freeform section.
   | Trill -- ^ Fill lanes on two keys.
@@ -38,19 +38,19 @@ data LaneRange = C | D | E | F | G | A
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 instance (NN.C a) => Interpret (MIDI.T a) (T a) where
-  interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
+  interpret (Length len (MIDI.Note _ p _)) = case V.fromPitch p of
     0 -> single $ Point $ LaneShift C
     2 -> single $ Point $ LaneShift D
     4 -> single $ Point $ LaneShift E
     5 -> single $ Point $ LaneShift F
     7 -> single $ Point $ LaneShift G
     9 -> single $ Point $ LaneShift A
-    i | 48 <= i && i <= 72 -> single $ Long len $ Note p
-    115 -> single $ Long len Solo
-    116 -> single $ Long len Overdrive
-    120 -> single $ Long len BRE
-    126 -> single $ Long len Glissando
-    127 -> single $ Long len Trill
+    i | 48 <= i && i <= 72 -> single $ Length len $ Note p
+    115 -> single $ Length len Solo
+    116 -> single $ Length len Overdrive
+    120 -> single $ Length len BRE
+    126 -> single $ Length len Glissando
+    127 -> single $ Length len Trill
     _ -> none
   interpret (Point (MIDI.TextEvent str)) = case str of
     (readMood -> Just m) -> single $ Point $ Mood m
@@ -63,7 +63,7 @@ instance Interpret (T Beats) (MIDI.T Beats) where
     LaneShift rng -> MIDI.blip $ V.toPitch $ [0, 2, 4, 5, 7, 9] !! fromEnum rng
     Trainer t -> Point $ MIDI.TextEvent $ showTrainer t "key"
     Mood m -> Point $ MIDI.TextEvent $ showMood m
-  interpret (Long len l) = single $ Long len $ MIDI.standardNote $ case l of
+  interpret (Length len l) = single $ Length len $ MIDI.standardNote $ case l of
     Solo -> V.toPitch 115
     Glissando -> V.toPitch 126
     Trill -> V.toPitch 127

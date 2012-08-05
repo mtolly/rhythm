@@ -9,10 +9,9 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import Data.Rhythm.Time
 import Data.Rhythm.Event
 import Data.List (stripPrefix)
-import Control.Monad (guard)
 import Data.Rhythm.Interpret
 
-data Long
+data Length
   = Note C.Channel V.Pitch V.Velocity
   deriving (Eq, Ord, Show)
 
@@ -21,15 +20,15 @@ data Point
   | Lyric String
   deriving (Eq, Ord, Show, Read)
 
-instance Duration Long Point where
+instance Long Length where
   -- | A note-on and note-off are connected if their pitches are equal.
-  condense x@(Note _ px _) (Note _ py _) = guard (px == py) >> Just x
-type T = Event Long Point
+  match (Note _ px _) (Note _ py _) = px == py
+type T = Event Length Point
 
 instance Interpret E.T (T Bool) where
   interpret (E.MIDIEvent (C.Cons c (C.Voice v))) = case V.explicitNoteOff v of
-    V.NoteOff p vel -> single $ Long False $ Note c p vel
-    V.NoteOn p vel -> single $ Long True $ Note c p vel
+    V.NoteOff p vel -> single $ Length False $ Note c p vel
+    V.NoteOn p vel -> single $ Length True $ Note c p vel
     _ -> none
   interpret (E.MetaEvent (M.TextEvent str)) = single $ Point $ TextEvent str
   interpret (E.MetaEvent (M.Lyric str)) = single $ Point $ Lyric str
@@ -37,19 +36,19 @@ instance Interpret E.T (T Bool) where
 
 instance Interpret (T Bool) E.T where
   interpret evt = single $ case evt of
-    Long b (Note c p v) -> E.MIDIEvent $ C.Cons c $ C.Voice $
+    Length b (Note c p v) -> E.MIDIEvent $ C.Cons c $ C.Voice $
       (if b then V.NoteOff else V.NoteOn) p v
     Point p -> E.MetaEvent $ case p of
       TextEvent str -> M.TextEvent str
       Lyric str -> M.Lyric str
 
-standardNote :: V.Pitch -> Long
+standardNote :: V.Pitch -> Length
 standardNote p = Note (C.toChannel 0) p (V.toVelocity 96)
 
 -- | Creates a MIDI note of the minimum possible duration allowed by Rock Band.
 -- In a valid Rock Band MIDI, this is guaranteed to not overlap other notes.
 blip :: V.Pitch -> T Beats
-blip p = Long (1 / 32) $ standardNote p
+blip p = Length (1 / 32) $ standardNote p
 
 stripSuffix :: Eq a => [a] -> [a] -> Maybe [a]
 stripSuffix xs ys = fmap reverse $ stripPrefix (reverse xs) (reverse ys)

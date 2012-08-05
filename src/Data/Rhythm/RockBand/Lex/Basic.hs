@@ -13,7 +13,7 @@ import Control.Applicative ((<$>))
 import Data.Rhythm.Interpret
 import Data.Rhythm.Guitar.Base
 
-data Long
+data Length
   = Solo
   | Tremolo
   | Trill
@@ -31,10 +31,10 @@ data Point
   | StrumMap StrumMap
   deriving (Eq, Ord, Show, Read)
 
-instance Duration Long Point where
-  condense x@(AtFret _) (AtFret _) = Just x
-  condense x y = guard (x == y) >> Just x
-type T = Event Long Point
+instance Long Length where
+  match (AtFret _) (AtFret _) = True
+  match x y = x == y
+type T = Event Length Point
 
 data DiffEvent
   = Note Fret
@@ -74,8 +74,8 @@ data StrumMap
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 instance Interpret (MIDI.T a) (T a) where
-  interpret (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
-    i | 40 <= i && i <= 59 -> single $ Long b $ AtFret $ i - 40
+  interpret (Length b (MIDI.Note _ p _)) = case V.fromPitch p of
+    i | 40 <= i && i <= 59 -> single $ Length b $ AtFret $ i - 40
     i | let (oct, k) = quotRem i 12
       , 5 <= oct && oct <= 8
       , 0 <= k && k <= 6
@@ -84,18 +84,18 @@ instance Interpret (MIDI.T a) (T a) where
               5 -> ForceHOPO
               6 -> ForceStrum
               _ -> Note $ toEnum k
-      -> single $ Long b $ DiffEvent diff evt
-    103 -> single $ Long b Solo
-    105 -> single $ Long b Player1
-    106 -> single $ Long b Player2
-    116 -> single $ Long b Overdrive
-    120 -> single $ Long b BRE
+      -> single $ Length b $ DiffEvent diff evt
+    103 -> single $ Length b Solo
+    105 -> single $ Length b Player1
+    106 -> single $ Length b Player2
+    116 -> single $ Length b Overdrive
+    120 -> single $ Length b BRE
     121 -> return []
     122 -> return []
     123 -> return []
     124 -> return []
-    126 -> single $ Long b Tremolo
-    127 -> single $ Long b Trill
+    126 -> single $ Length b Tremolo
+    127 -> single $ Length b Trill
     _ -> none
   interpret (Point (MIDI.TextEvent str)) = case str of
     (readMood -> Just m) -> single $ Point $ Mood m
@@ -147,7 +147,7 @@ instance Interpret (T t) (MIDI.T t) where
     Mood m -> showMood m
     HandMap hm -> showHandMap hm
     StrumMap sm -> showStrumMap sm
-  interpret (Long len l) = return $ Long len . MIDI.standardNote . V.toPitch <$>
+  interpret (Length len l) = return $ Length len . MIDI.standardNote . V.toPitch <$>
     case l of
       Solo -> [103]
       Tremolo -> [126]

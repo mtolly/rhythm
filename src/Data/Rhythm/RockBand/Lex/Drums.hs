@@ -12,7 +12,7 @@ import Data.List (stripPrefix)
 import qualified Numeric.NonNegative.Class as NN
 import Control.Applicative
 
-data Long
+data Length
   = Toms Drum -- ^ Change 'Yellow', 'Blue', and 'Green' cymbal notes to toms.
   | Overdrive -- ^ The phrase which fills the player's energy bar.
   | Activation -- ^ Fill lanes for Overdrive activation and Big Rock Endings.
@@ -30,8 +30,8 @@ data Point
   | DiffEvent Difficulty DiffEvent -- ^ Events for a specific difficulty.
   deriving (Eq, Ord, Show, Read)
 
-instance Duration Long Point
-type T = Event Long Point
+instance Long Length
+type T = Event Length Point
 
 data DiffEvent
   = Mix Audio Disco -- ^ Set the drum audio & pad layout.
@@ -89,7 +89,7 @@ data Hit = SoftHit | HardHit deriving (Eq, Ord, Show, Read, Enum, Bounded)
 data Hand = LH | RH deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 instance (NN.C a) => Interpret (MIDI.T a) Animation where
-  interpret (Long _ (MIDI.Note _ p _)) = case V.fromPitch p of
+  interpret (Length _ (MIDI.Note _ p _)) = case V.fromPitch p of
     24 -> single KickRF
     26 -> single $ Snare HardHit LH
     27 -> single $ Snare HardHit RH
@@ -121,27 +121,27 @@ instance (NN.C a) => Interpret (MIDI.T a) Animation where
   interpret _ = none
 
 instance (NN.C a) => Interpret (MIDI.T a) (T a) where
-  interpret l@(Long len (MIDI.Note _ p _)) = case V.fromPitch p of
-    25 -> single $ Long len HihatOpen
+  interpret l@(Length len (MIDI.Note _ p _)) = case V.fromPitch p of
+    25 -> single $ Length len HihatOpen
     -- Notes
     i | let (oct, k) = quotRem i 12
       , 5 <= oct && oct <= 8
       , 0 <= k && k <= 4
       -> single $ Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k
-    103 -> single $ Long len Solo
-    105 -> single $ Long len Player1
-    106 -> single $ Long len Player2
-    110 -> single $ Long len $ Toms Yellow
-    111 -> single $ Long len $ Toms Blue
-    112 -> single $ Long len $ Toms Green
-    116 -> single $ Long len Overdrive
-    120 -> single $ Long len Activation
+    103 -> single $ Length len Solo
+    105 -> single $ Length len Player1
+    106 -> single $ Length len Player2
+    110 -> single $ Length len $ Toms Yellow
+    111 -> single $ Length len $ Toms Blue
+    112 -> single $ Length len $ Toms Green
+    116 -> single $ Length len Overdrive
+    120 -> single $ Length len Activation
     121 -> return []
     122 -> return []
     123 -> return []
     124 -> return []
-    126 -> single $ Long len SingleRoll
-    127 -> single $ Long len DoubleRoll
+    126 -> single $ Length len SingleRoll
+    127 -> single $ Length len DoubleRoll
     _ -> map (Point . Animation) <$> interpret l
   interpret (Point (MIDI.TextEvent str)) = case str of
     (readMix -> Just p) -> single $ Point p
@@ -178,7 +178,7 @@ instance Interpret (T Beats) (MIDI.T Beats) where
       Mix aud dsc -> Point $ MIDI.TextEvent $ showMix diff aud dsc
       Note drm ->
         MIDI.blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm
-  interpret (Long len d) = return $ case d of
+  interpret (Length len d) = return $ case d of
     HihatOpen -> [dlen 25]
     Toms drm -> [dlen $ 108 + fromEnum drm]
     Solo -> [dlen 103]
@@ -188,7 +188,7 @@ instance Interpret (T Beats) (MIDI.T Beats) where
     Activation -> map dlen [120..124]
     SingleRoll -> [dlen 126]
     DoubleRoll -> [dlen 127]
-    where dlen = Long len . MIDI.standardNote . V.toPitch
+    where dlen = Length len . MIDI.standardNote . V.toPitch
 
 instance Interpret Animation (MIDI.T Beats) where
   interpret anim = single $ case anim of

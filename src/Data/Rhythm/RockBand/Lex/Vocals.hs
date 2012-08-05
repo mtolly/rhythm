@@ -24,7 +24,7 @@ data Point
   | PercussionAnimation PercussionType Bool
   deriving (Eq, Ord, Show, Read)
 
-data Long
+data Length
   -- | General phrase marker (RB3) or Player 1 phrases (pre-RB3).
   = Phrase
   -- | Pre-RB3, used for 2nd player phrases in Tug of War.
@@ -35,8 +35,8 @@ data Long
   | Note V.Pitch
   deriving (Eq, Ord, Show)
 
-instance Duration Long Point
-type T = Event Long Point
+instance Long Length
+type T = Event Length Point
 
 data PercussionType
   = Tambourine
@@ -45,15 +45,15 @@ data PercussionType
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 instance (NN.C a) => Interpret (MIDI.T a) (T a) where
-  interpret (Long len (MIDI.Note _ p _)) = case V.fromPitch p of
-    0 -> single $ Long len RangeShift
+  interpret (Length len (MIDI.Note _ p _)) = case V.fromPitch p of
+    0 -> single $ Length len RangeShift
     1 -> single $ Point LyricShift
-    i | 36 <= i && i <= 84 -> single $ Long len $ Note p
+    i | 36 <= i && i <= 84 -> single $ Length len $ Note p
     96 -> single $ Point Percussion
     97 -> single $ Point PercussionSound
-    105 -> single $ Long len Phrase
-    106 -> single $ Long len Phrase2
-    116 -> single $ Long len Overdrive
+    105 -> single $ Length len Phrase
+    106 -> single $ Length len Phrase2
+    116 -> single $ Length len Overdrive
     _ -> none
   interpret (Point (MIDI.Lyric str)) = single $ Point $ Lyric str
   interpret (Point (MIDI.TextEvent str)) = case str of
@@ -70,7 +70,7 @@ instance Interpret (T Beats) (MIDI.T Beats) where
     Percussion -> MIDI.blip $ V.toPitch 96
     PercussionSound -> MIDI.blip $ V.toPitch 97
     PercussionAnimation t b -> Point $ MIDI.TextEvent $ showPercAnim t b
-  interpret (Long len l) = single $ Long len $ MIDI.standardNote $ case l of
+  interpret (Length len l) = single $ Length len $ MIDI.standardNote $ case l of
     Overdrive -> V.toPitch 116
     Phrase -> V.toPitch 105
     Phrase2 -> V.toPitch 106

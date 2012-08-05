@@ -15,7 +15,7 @@ data T
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 instance (NN.C a) => Interpret (MIDI.T a) T where
-  interpret (Long _ (MIDI.Note _ p _)) = case V.fromPitch p of
+  interpret (Length _ (MIDI.Note _ p _)) = case V.fromPitch p of
     12 -> single Bar
     13 -> single Beat
     _ -> none
