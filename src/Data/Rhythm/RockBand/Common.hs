@@ -70,9 +70,10 @@ readTrainer str = readBegin <|> readNorm <|> readEnd where
         _ -> Nothing
 
 showTrainer :: Trainer -> String -> String
-showTrainer (TrainerBegin n) inst = "[begin_" ++ inst ++ " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
-showTrainer (TrainerEnd n) inst = "[end_" ++ inst ++ " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
-showTrainer (TrainerNorm n) inst = "[" ++ inst ++ "_norm song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
+showTrainer (TrainerBegin n) inst =
+  "[begin_" ++ inst ++ " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
+showTrainer (TrainerEnd n) inst =
+  "[end_" ++ inst ++ " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
+showTrainer (TrainerNorm n) inst =
+  "[" ++ inst ++ "_norm song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
 
-newtype GtrFret = GtrFret { fromGtrFret :: Int }
-  deriving (Eq, Ord, Show, Read)

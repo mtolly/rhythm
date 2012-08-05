@@ -14,9 +14,7 @@ import Data.Char (isSpace)
 import Data.List (stripPrefix, sort)
 import Data.Maybe (listToMaybe)
 import qualified Data.EventList.Relative.TimeBody as RTB
-
-data GtrString = S6 | S5 | S4 | S3 | S2 | S1
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
+import Data.Rhythm.Guitar.Base
 
 instance Duration Long Point
 type T = Event Long Point
@@ -42,7 +40,7 @@ data Long
   deriving (Eq, Ord, Show)
 
 data DiffEvent
-  = Note GtrString GtrFret NoteType
+  = Note SixString GtrFret NoteType
   | ForceHOPO
   | Slide SlideType
   | Arpeggio
@@ -94,9 +92,9 @@ instance (NN.C a) => Interpret (MIDI.T a) (T a) where
         11 -> single $ longDiff AllFrets
         _ -> single $ longDiff $ Note nstr nfret ntyp where
           nstr = toEnum k
-          nfret = GtrFret $ V.fromVelocity vel - 100
+          nfret = V.fromVelocity vel - 100
           ntyp = toEnum $ C.fromChannel ch
-    108 -> single $ Point $ HandPosition $ GtrFret $ V.fromVelocity vel - 100
+    108 -> single $ Point $ HandPosition $ V.fromVelocity vel - 100
     115 -> single $ Long len Solo
     116 -> single $ Long len Overdrive
     120 -> single $ Long len BRE
@@ -132,4 +130,4 @@ autoHandPosition :: (NN.C t) => RTB.T t DiffEvent -> RTB.T t GtrFret
 autoHandPosition = RTB.mapMaybe getFret . RTB.collectCoincident where
   getFret :: [DiffEvent] -> Maybe GtrFret
   getFret evts = listToMaybe $ sort
-    [f | Note _ f _ <- evts, fromGtrFret f /= 0]
+    [f | Note _ f _ <- evts, f /= 0]

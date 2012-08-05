@@ -11,6 +11,7 @@ import Data.List (stripPrefix)
 import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
 import Control.Applicative ((<$>))
 import Data.Rhythm.Interpret
+import Data.Rhythm.Guitar.Base
 
 data Long
   = Solo
@@ -22,7 +23,7 @@ data Long
   | Player2 -- ^ Used pre-RB3 for Tug of War mode.
   | AtFret GtrFret -- ^ Frets 0..19 (pitches 40..59 in the MIDI) are valid.
   | DiffEvent Difficulty DiffEvent
-  deriving (Eq, Ord, Show, Read)
+  deriving (Eq, Ord, Show)
 
 data Point
   = Mood Mood
@@ -74,7 +75,7 @@ data StrumMap
 
 instance Interpret (MIDI.T a) (T a) where
   interpret (Long b (MIDI.Note _ p _)) = case V.fromPitch p of
-    i | 40 <= i && i <= 59 -> single $ Long b $ AtFret $ GtrFret $ i - 40
+    i | 40 <= i && i <= 59 -> single $ Long b $ AtFret $ i - 40
     i | let (oct, k) = quotRem i 12
       , 5 <= oct && oct <= 8
       , 0 <= k && k <= 6
@@ -155,9 +156,9 @@ instance Interpret (T t) (MIDI.T t) where
       BRE -> [120..124]
       Player1 -> [105]
       Player2 -> [106]
-      AtFret f -> [fromGtrFret f + 40]
-      DiffEvent diff evt -> [60 + 12 * fromEnum diff + offset] where
-        offset = case evt of
+      AtFret f -> [f + 40]
+      DiffEvent diff evt -> [60 + 12 * fromEnum diff + off] where
+        off = case evt of
           Note f -> fromEnum f
           ForceHOPO -> 5
           ForceStrum -> 6
