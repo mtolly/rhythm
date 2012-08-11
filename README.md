@@ -21,5 +21,5 @@ have no duration, and other events have begin and end points. The `Event` type
 encapsulates this idea. It can be used in one of two ways. You can have a list
 of `Event Bool`, in which case the on and off events are stored as two separate
 events -- this is how standard MIDI files work. Or, you can have a list of
-`Event a` for some numeric type a, in which case you have a single event which
-directly stores its length -- this is how FeedBack ".chart" files work.
+`Event a` for some numeric type `a`, in which case you have a single event
+which directly stores its length -- this is how FeedBack ".chart" files work.

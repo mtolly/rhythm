@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}
 -- | The contents of the \"BEAT\" track.
 module Data.Rhythm.RockBand.Lex.Beat where
 
@@ -14,12 +13,12 @@ data T
   | Beat -- ^ A thin barline; a beat in the middle of a measure.
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-instance (NN.C a) => Interpret (MIDI.T a) T where
-  interpret (Length _ (MIDI.Note _ p _)) = case V.fromPitch p of
-    12 -> single Bar
-    13 -> single Beat
-    _ -> none
-  interpret _ = none
+interpret :: (NN.C t) => Interpreter (MIDI.T t) T
+interpret (Length _ (MIDI.Note _ p _)) = case V.fromPitch p of
+  12 -> single Bar
+  13 -> single Beat
+  _ -> none
+interpret _ = none
 
-instance Interpret T (MIDI.T Beats) where
-  interpret b = single $ MIDI.blip $ V.toPitch $ case b of Bar -> 12; Beat -> 13
+uninterpret :: Uninterpreter T (MIDI.T Beats)
+uninterpret b = (:[]) $ MIDI.blip $ V.toPitch $ case b of Bar -> 12; Beat -> 13

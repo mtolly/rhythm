@@ -1,5 +1,4 @@
-{-# LANGUAGE ViewPatterns, MultiParamTypeClasses,
-    TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {- | The events found in the \"PART VOCALS\", \"HARM1\", \"HARM2\", and
      \"HARM3\" tracks. -}
 module Data.Rhythm.RockBand.Lex.Vocals where
@@ -44,38 +43,38 @@ data PercussionType
   | Clap
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-instance (NN.C a) => Interpret (MIDI.T a) (T a) where
-  interpret (Length len (MIDI.Note _ p _)) = case V.fromPitch p of
-    0 -> single $ Length len RangeShift
-    1 -> single $ Point LyricShift
-    i | 36 <= i && i <= 84 -> single $ Length len $ Note p
-    96 -> single $ Point Percussion
-    97 -> single $ Point PercussionSound
-    105 -> single $ Length len Phrase
-    106 -> single $ Length len Phrase2
-    116 -> single $ Length len Overdrive
-    _ -> none
-  interpret (Point (MIDI.Lyric str)) = single $ Point $ Lyric str
-  interpret (Point (MIDI.TextEvent str)) = case str of
-    (readPercAnim -> Just evt) -> single $ Point evt
-    (readMood     -> Just m  ) -> single $ Point $ Mood m
-    _ -> warn w >> single (Point $ Lyric str) where
-      w = "Unrecognized text " ++ show str ++ " treated as lyric"
+interpret :: (NN.C t) => Interpreter (MIDI.T t) (T t)
+interpret (Length len (MIDI.Note _ p _)) = case V.fromPitch p of
+  0 -> single $ Length len RangeShift
+  1 -> single $ Point LyricShift
+  i | 36 <= i && i <= 84 -> single $ Length len $ Note p
+  96 -> single $ Point Percussion
+  97 -> single $ Point PercussionSound
+  105 -> single $ Length len Phrase
+  106 -> single $ Length len Phrase2
+  116 -> single $ Length len Overdrive
+  _ -> none
+interpret (Point (MIDI.Lyric str)) = single $ Point $ Lyric str
+interpret (Point (MIDI.TextEvent str)) = case str of
+  (readPercAnim -> Just evt) -> single $ Point evt
+  (readMood     -> Just m  ) -> single $ Point $ Mood m
+  _ -> warn w >> single (Point $ Lyric str) where
+    w = "Unrecognized text " ++ show str ++ " treated as lyric"
 
-instance Interpret (T Beats) (MIDI.T Beats) where
-  interpret (Point p) = single $ case p of
-    LyricShift -> MIDI.blip $ V.toPitch 1
-    Mood m -> Point $ MIDI.TextEvent $ showMood m
-    Lyric str -> Point $ MIDI.Lyric str
-    Percussion -> MIDI.blip $ V.toPitch 96
-    PercussionSound -> MIDI.blip $ V.toPitch 97
-    PercussionAnimation t b -> Point $ MIDI.TextEvent $ showPercAnim t b
-  interpret (Length len l) = single $ Length len $ MIDI.standardNote $ case l of
-    Overdrive -> V.toPitch 116
-    Phrase -> V.toPitch 105
-    Phrase2 -> V.toPitch 106
-    RangeShift -> V.toPitch 0
-    Note p -> p
+uninterpret :: Uninterpreter (T Beats) (MIDI.T Beats)
+uninterpret (Point p) = (:[]) $ case p of
+  LyricShift -> MIDI.blip $ V.toPitch 1
+  Mood m -> Point $ MIDI.TextEvent $ showMood m
+  Lyric str -> Point $ MIDI.Lyric str
+  Percussion -> MIDI.blip $ V.toPitch 96
+  PercussionSound -> MIDI.blip $ V.toPitch 97
+  PercussionAnimation t b -> Point $ MIDI.TextEvent $ showPercAnim t b
+uninterpret (Length len l) = (:[]) $ Length len $ MIDI.standardNote $ case l of
+  Overdrive -> V.toPitch 116
+  Phrase -> V.toPitch 105
+  Phrase2 -> V.toPitch 106
+  RangeShift -> V.toPitch 0
+  Note p -> p
 
 readPercAnim :: String -> Maybe Point
 readPercAnim str = case str of

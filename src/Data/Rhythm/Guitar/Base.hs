@@ -5,20 +5,23 @@ type GtrFret = Int
 data SixString = S6 | S5 | S4 | S3 | S2 | S1
 	deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-type Tuning s a = s -> a
+-- | A tuning is a list of string pitches, from lowest to highest.
+type Tuning a = [a]
 
-stdTuning :: (Num a) => Tuning SixString a
-stdTuning = ([40, 45, 50, 55, 59, 64] !!) . fromEnum
+play :: (Num a) => SixString -> GtrFret -> Tuning a -> a
+play s f t = (t !! fromEnum s) + fromIntegral f
 
-dropD :: (Num a) => Tuning SixString a
-dropD S6 = stdTuning S6 - 2
-dropD str = stdTuning str
+stdTuning :: (Num a) => Tuning a
+stdTuning = [40, 45, 50, 55, 59, 64]
 
--- | Tunes all the strings up or down by some amount.
-offset :: (Num a) => a -> Tuning s a -> Tuning s a
-offset off tun = (+ off) . tun
+-- | Converts from absolute pitches to standard tuning offsets.
+toOffsets :: (Num a) => Tuning a -> Tuning a
+toOffsets = zipWith subtract stdTuning
 
--- | The note produced by a given string, fret, and tuning.
-play :: (Num a) => s -> GtrFret -> Tuning s a -> a
-play str frt tun = tun str + fromIntegral frt
+-- | Converts from standard tuning offsets to absolute pitches.
+fromOffsets :: (Num a) => Tuning a -> Tuning a
+fromOffsets = zipWith (+) stdTuning
+
+dropD :: (Num a) => Tuning a
+dropD = fromOffsets [-2, 0, 0, 0, 0, 0]
 

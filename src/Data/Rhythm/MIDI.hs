@@ -94,3 +94,4 @@ toMIDISignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
         isPowerOf2' n = case quotRem n 2 of
           (n', 0) -> (+1) <$> isPowerOf2' n'
           _ -> Nothing
+

@@ -13,12 +13,11 @@ import qualified Numeric.NonNegative.Class as NN
 import Control.Monad.Trans.Writer
 import Control.Monad.Trans.Class
 
-class Interpret a b where
-  interpret :: a -> WriterT [String] Maybe [b]
+type Interpreter a b = a -> WriterT [String] Maybe [b]
 
-interpretEvents :: (Interpret a b, NN.C t) =>
+interpretRTB :: (NN.C t) => Interpreter a b ->
   RTB.T t a -> (RTB.T t b, RTB.T t String, RTB.T t a)
-interpretEvents evts = case RTB.partitionMaybe (runWriterT . interpret) evts of
+interpretRTB f rtb = case RTB.partitionMaybe (runWriterT . f) rtb of
   (out, bad) -> (good, warns, bad) where
     good  = RTB.flatten $ fmap fst out
     warns = RTB.flatten $ fmap snd out
@@ -31,3 +30,9 @@ single x = return [x]
 
 none :: WriterT [w] Maybe a
 none = lift Nothing
+
+type Uninterpreter a b = a -> [b]
+
+uninterpretRTB :: (NN.C t) => Uninterpreter a b -> RTB.T t a -> RTB.T t b
+uninterpretRTB f = RTB.flatten . fmap f
+

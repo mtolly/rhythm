@@ -1,5 +1,4 @@
-{-# LANGUAGE ViewPatterns, PatternGuards, MultiParamTypeClasses,
-    FlexibleInstances, TypeSynonymInstances #-}
+{-# LANGUAGE ViewPatterns, PatternGuards #-}
 -- | The contents of the \"PART GUITAR\/BASS\/KEYS\" tracks.
 module Data.Rhythm.RockBand.Lex.Basic where
 
@@ -73,36 +72,36 @@ data StrumMap
   | SlapBass
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-instance Interpret (MIDI.T a) (T a) where
-  interpret (Length b (MIDI.Note _ p _)) = case V.fromPitch p of
-    i | 40 <= i && i <= 59 -> single $ Length b $ AtFret $ i - 40
-    i | let (oct, k) = quotRem i 12
-      , 5 <= oct && oct <= 8
-      , 0 <= k && k <= 6
-      , let diff = toEnum $ oct - 5
-            evt = case k of
-              5 -> ForceHOPO
-              6 -> ForceStrum
-              _ -> Note $ toEnum k
-      -> single $ Length b $ DiffEvent diff evt
-    103 -> single $ Length b Solo
-    105 -> single $ Length b Player1
-    106 -> single $ Length b Player2
-    116 -> single $ Length b Overdrive
-    120 -> single $ Length b BRE
-    121 -> return []
-    122 -> return []
-    123 -> return []
-    124 -> return []
-    126 -> single $ Length b Tremolo
-    127 -> single $ Length b Trill
-    _ -> none
-  interpret (Point (MIDI.TextEvent str)) = case str of
-    (readMood -> Just m) -> single $ Point $ Mood m
-    (readHandMap -> Just hm) -> single $ Point $ HandMap hm
-    (readStrumMap -> Just sm) -> single $ Point $ StrumMap sm
-    _ -> none
-  interpret _ = none
+interpret :: Interpreter (MIDI.T a) (T a)
+interpret (Length b (MIDI.Note _ p _)) = case V.fromPitch p of
+  i | 40 <= i && i <= 59 -> single $ Length b $ AtFret $ i - 40
+  i | let (oct, k) = quotRem i 12
+    , 5 <= oct && oct <= 8
+    , 0 <= k && k <= 6
+    , let diff = toEnum $ oct - 5
+          evt = case k of
+            5 -> ForceHOPO
+            6 -> ForceStrum
+            _ -> Note $ toEnum k
+    -> single $ Length b $ DiffEvent diff evt
+  103 -> single $ Length b Solo
+  105 -> single $ Length b Player1
+  106 -> single $ Length b Player2
+  116 -> single $ Length b Overdrive
+  120 -> single $ Length b BRE
+  121 -> return []
+  122 -> return []
+  123 -> return []
+  124 -> return []
+  126 -> single $ Length b Tremolo
+  127 -> single $ Length b Trill
+  _ -> none
+interpret (Point (MIDI.TextEvent str)) = case str of
+  (readMood -> Just m) -> single $ Point $ Mood m
+  (readHandMap -> Just hm) -> single $ Point $ HandMap hm
+  (readStrumMap -> Just sm) -> single $ Point $ StrumMap sm
+  _ -> none
+interpret _ = none
 
 readHandMap :: String -> Maybe HandMap
 readHandMap = stripPrefix "[map HandMap_" >=> \str -> case str of
@@ -142,23 +141,24 @@ showStrumMap StrumDefault = "[map StrumMap_Default]"
 showStrumMap Pick = "[map StrumMap_Pick]"
 showStrumMap SlapBass = "[map StrumMap_SlapBass]"
 
-instance Interpret (T t) (MIDI.T t) where
-  interpret (Point p) = single . Point . MIDI.TextEvent $ case p of
-    Mood m -> showMood m
-    HandMap hm -> showHandMap hm
-    StrumMap sm -> showStrumMap sm
-  interpret (Length len l) = return $ Length len . MIDI.standardNote . V.toPitch <$>
-    case l of
-      Solo -> [103]
-      Tremolo -> [126]
-      Trill -> [127]
-      Overdrive -> [116]
-      BRE -> [120..124]
-      Player1 -> [105]
-      Player2 -> [106]
-      AtFret f -> [f + 40]
-      DiffEvent diff evt -> [60 + 12 * fromEnum diff + off] where
-        off = case evt of
-          Note f -> fromEnum f
-          ForceHOPO -> 5
-          ForceStrum -> 6
+uninterpret :: Uninterpreter (T t) (MIDI.T t)
+uninterpret (Point p) = (:[]) . Point . MIDI.TextEvent $ case p of
+  Mood m -> showMood m
+  HandMap hm -> showHandMap hm
+  StrumMap sm -> showStrumMap sm
+uninterpret (Length len l) = Length len . MIDI.standardNote . V.toPitch <$>
+  case l of
+    Solo -> [103]
+    Tremolo -> [126]
+    Trill -> [127]
+    Overdrive -> [116]
+    BRE -> [120..124]
+    Player1 -> [105]
+    Player2 -> [106]
+    AtFret f -> [f + 40]
+    DiffEvent diff evt -> [60 + 12 * fromEnum diff + off] where
+      off = case evt of
+        Note f -> fromEnum f
+        ForceHOPO -> 5
+        ForceStrum -> 6
+
