@@ -5,12 +5,14 @@ module Data.Rhythm.RockBand.Lex.Vocals where
 
 import Data.Rhythm.RockBand.Common
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Time
 import Data.Rhythm.Interpret
 import qualified Numeric.NonNegative.Class as NN
 import Data.Char (toLower)
+import qualified Sound.MIDI.File.Event as E
+import qualified Sound.MIDI.File.Event.Meta as M
 
 data Point
   = LyricShift
@@ -54,22 +56,23 @@ interpret (Length len (MIDI.Note _ p _)) = case V.fromPitch p of
   106 -> single $ Length len Phrase2
   116 -> single $ Length len Overdrive
   _ -> none
-interpret (Point (MIDI.Lyric str)) = single $ Point $ Lyric str
-interpret (Point (MIDI.TextEvent str)) = case str of
+interpret (Point (E.MetaEvent (M.Lyric str))) = single $ Point $ Lyric str
+interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
   (readPercAnim -> Just evt) -> single $ Point evt
   (readMood     -> Just m  ) -> single $ Point $ Mood m
   _ -> warn w >> single (Point $ Lyric str) where
     w = "Unrecognized text " ++ show str ++ " treated as lyric"
+interpret _ = none
 
 uninterpret :: Uninterpreter (T Beats) (MIDI.T Beats)
 uninterpret (Point p) = (:[]) $ case p of
-  LyricShift -> MIDI.blip $ V.toPitch 1
-  Mood m -> Point $ MIDI.TextEvent $ showMood m
-  Lyric str -> Point $ MIDI.Lyric str
-  Percussion -> MIDI.blip $ V.toPitch 96
-  PercussionSound -> MIDI.blip $ V.toPitch 97
-  PercussionAnimation t b -> Point $ MIDI.TextEvent $ showPercAnim t b
-uninterpret (Length len l) = (:[]) $ Length len $ MIDI.standardNote $ case l of
+  LyricShift -> blip $ V.toPitch 1
+  Mood m -> Point . E.MetaEvent . M.TextEvent $ showMood m
+  Lyric str -> Point . E.MetaEvent $ M.Lyric str
+  Percussion -> blip $ V.toPitch 96
+  PercussionSound -> blip $ V.toPitch 97
+  PercussionAnimation t b -> Point . E.MetaEvent . M.TextEvent $ showPercAnim t b
+uninterpret (Length len l) = (:[]) $ Length len $ standardNote $ case l of
   Overdrive -> V.toPitch 116
   Phrase -> V.toPitch 105
   Phrase2 -> V.toPitch 106

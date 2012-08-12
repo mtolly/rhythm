@@ -3,9 +3,13 @@
 module Data.Rhythm.RockBand.Lex.Events where
 
 import Control.Monad ((>=>), mplus)
-import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import qualified Data.Rhythm.MIDI as MIDI
+import qualified Sound.MIDI.File.Event as E
+import qualified Sound.MIDI.File.Event.Meta as M
 import Data.List (stripPrefix)
 import Data.Rhythm.Event
+import Data.Rhythm.Interpret
+import Data.Rhythm.RockBand.Common
 
 data T
   = MusicStart
@@ -18,30 +22,30 @@ data T
   deriving (Eq, Ord, Show, Read)
 
 data Crowd
-  = Realtime
-  | Intense
-  | Normal
-  | Mellow
+  = CrowdRealtime
+  | CrowdIntense
+  | CrowdNormal
+  | CrowdMellow
   | Clap Bool
   deriving (Eq, Ord, Show, Read)
 
-readEvent :: MIDI.T a -> Maybe T
-readEvent (Point (MIDI.TextEvent str)) = case str of
-  (readCrowd -> Just c) -> Just $ Crowd c
-  (readPractice -> Just sec) -> Just $ Practice sec
-  "[music_start]" -> Just MusicStart
-  "[music_end]"   -> Just MusicEnd
-  "[end]"         -> Just End
-  "[coda]"        -> Just Coda
-  _               -> Nothing
-readEvent _ = Nothing
+interpret :: Interpreter (MIDI.T t) T
+interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
+  (readCrowd -> Just c) -> single $ Crowd c
+  (readPractice -> Just sec) -> single $ Practice sec
+  "[music_start]" -> single MusicStart
+  "[music_end]"   -> single MusicEnd
+  "[end]"         -> single End
+  "[coda]"        -> single Coda
+  _               -> none
+interpret _ = none
 
 readCrowd :: String -> Maybe Crowd
 readCrowd = stripPrefix "[crowd_" >=> \rest -> case rest of
-  "realtime]" -> Just Realtime
-  "intense]"  -> Just Intense
-  "normal]"   -> Just Normal
-  "mellow]"   -> Just Mellow
+  "realtime]" -> Just CrowdRealtime
+  "intense]"  -> Just CrowdIntense
+  "normal]"   -> Just CrowdNormal
+  "mellow]"   -> Just CrowdMellow
   "clap]"     -> Just $ Clap True
   "noclap]"   -> Just $ Clap False
   _           -> Nothing
@@ -49,4 +53,4 @@ readCrowd = stripPrefix "[crowd_" >=> \rest -> case rest of
 -- | Supports both pre-RB3 (\"section\") and RB3 (\"prc\") event formats.
 readPractice :: String -> Maybe String
 readPractice s = mplus (stripPrefix "[prc_" s) (stripPrefix "[section " s)
-  >>= MIDI.stripSuffix "]"
+  >>= stripSuffix "]"

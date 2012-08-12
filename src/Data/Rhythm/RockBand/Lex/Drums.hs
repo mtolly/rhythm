@@ -1,10 +1,12 @@
-{-# LANGUAGE PatternGuards, ViewPatterns, MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE PatternGuards, ViewPatterns #-}
 -- | The contents of the \"PART DRUMS\" track.
 module Data.Rhythm.RockBand.Lex.Drums where
 
 import Data.Rhythm.RockBand.Common
+import qualified Sound.MIDI.File.Event as E
+import qualified Sound.MIDI.File.Event.Meta as M
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.Time
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
@@ -143,7 +145,7 @@ interpret l@(Length len (MIDI.Note _ p _)) = case V.fromPitch p of
   126 -> single $ Length len SingleRoll
   127 -> single $ Length len DoubleRoll
   _ -> map (Point . Animation) <$> interpretAnimation l
-interpret (Point (MIDI.TextEvent str)) = case str of
+interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
   (readMix -> Just p) -> single $ Point p
   (readMood -> Just m) -> single $ Point $ Mood m
   "[ride_side_true]" -> single $ Point $ Animation $ RideSide True
@@ -173,10 +175,10 @@ readMix str
 uninterpret :: Uninterpreter (T Beats) (MIDI.T Beats)
 uninterpret (Point p) = case p of
   Animation anim -> uninterpretAnimation anim
-  Mood m -> (:[]) $ Point $ MIDI.TextEvent $ showMood m
+  Mood m -> (:[]) $ Point . E.MetaEvent . M.TextEvent $ showMood m
   DiffEvent diff ev -> (:[]) $ case ev of
-    Mix aud dsc -> Point $ MIDI.TextEvent $ showMix diff aud dsc
-    Note drm -> MIDI.blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm
+    Mix aud dsc -> Point . E.MetaEvent . M.TextEvent $ showMix diff aud dsc
+    Note drm -> blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm
 uninterpret (Length len d) = map dlen $ case d of
   HihatOpen -> [25]
   Toms drm -> [108 + fromEnum drm]
@@ -187,41 +189,41 @@ uninterpret (Length len d) = map dlen $ case d of
   Activation -> [120..124]
   SingleRoll -> [126]
   DoubleRoll -> [127]
-  where dlen = Length len . MIDI.standardNote . V.toPitch
+  where dlen = Length len . standardNote . V.toPitch
 
 uninterpretAnimation :: Uninterpreter Animation (MIDI.T Beats)
 uninterpretAnimation anim = (:[]) $ case anim of
-  KickRF -> blip 24
+  KickRF -> blip' 24
   -- HihatOpen (25) is not an Animation
-  Snare HardHit LH -> blip 26
-  Snare HardHit RH -> blip 27
-  Snare SoftHit LH -> blip 28
-  Snare SoftHit RH -> blip 29
-  Hihat LH -> blip 30
-  Hihat RH -> blip 31
-  PercussionRH -> blip 32
+  Snare HardHit LH -> blip' 26
+  Snare HardHit RH -> blip' 27
+  Snare SoftHit LH -> blip' 28
+  Snare SoftHit RH -> blip' 29
+  Hihat LH -> blip' 30
+  Hihat RH -> blip' 31
+  PercussionRH -> blip' 32
   -- 33 unused
-  Crash1 HardHit LH -> blip 34
-  Crash1 SoftHit LH -> blip 35
-  Crash1 HardHit RH -> blip 36
-  Crash1 SoftHit RH -> blip 37
-  Crash2 HardHit RH -> blip 38
-  Crash2 SoftHit RH -> blip 39
-  Crash1RHChokeLH -> blip 40
-  Crash2RHChokeLH -> blip 41
-  Ride RH -> blip 42
-  Ride LH -> blip 43
-  Crash2 HardHit LH -> blip 44
-  Crash2 SoftHit LH -> blip 45
-  Tom1 LH -> blip 46
-  Tom1 RH -> blip 47
-  Tom2 LH -> blip 48
-  Tom2 RH -> blip 49
-  FloorTom LH -> blip 50
-  FloorTom RH -> blip 51
-  RideSide True -> Point $ MIDI.TextEvent "[ride_side_true]"
-  RideSide False -> Point $ MIDI.TextEvent "[ride_side_false]"
-  where blip = MIDI.blip . V.toPitch
+  Crash1 HardHit LH -> blip' 34
+  Crash1 SoftHit LH -> blip' 35
+  Crash1 HardHit RH -> blip' 36
+  Crash1 SoftHit RH -> blip' 37
+  Crash2 HardHit RH -> blip' 38
+  Crash2 SoftHit RH -> blip' 39
+  Crash1RHChokeLH -> blip' 40
+  Crash2RHChokeLH -> blip' 41
+  Ride RH -> blip' 42
+  Ride LH -> blip' 43
+  Crash2 HardHit LH -> blip' 44
+  Crash2 SoftHit LH -> blip' 45
+  Tom1 LH -> blip' 46
+  Tom1 RH -> blip' 47
+  Tom2 LH -> blip' 48
+  Tom2 RH -> blip' 49
+  FloorTom LH -> blip' 50
+  FloorTom RH -> blip' 51
+  RideSide True -> Point . E.MetaEvent $ M.TextEvent "[ride_side_true]"
+  RideSide False -> Point . E.MetaEvent $ M.TextEvent "[ride_side_false]"
+  where blip' = blip . V.toPitch
 
 showMix :: Difficulty -> Audio -> Disco -> String
 showMix diff aud dsc = "[mix " ++ x ++ " drums" ++ y ++ z ++ "]" where

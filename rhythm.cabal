@@ -25,7 +25,6 @@ Library
 
                     Data.Rhythm.RockBand.Common
                     
-                    Data.Rhythm.RockBand.Lex.MIDI
                     Data.Rhythm.RockBand.Lex.Events
                     Data.Rhythm.RockBand.Lex.Beat
                     Data.Rhythm.RockBand.Lex.Vocals

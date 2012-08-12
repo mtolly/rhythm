@@ -3,8 +3,10 @@
 module Data.Rhythm.RockBand.Lex.ProKeys where
 
 import Data.Rhythm.RockBand.Common
+import qualified Sound.MIDI.File.Event as E
+import qualified Sound.MIDI.File.Event.Meta as M
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Time
 import qualified Numeric.NonNegative.Class as NN
@@ -51,7 +53,7 @@ interpret (Length len (MIDI.Note _ p _)) = case V.fromPitch p of
   126 -> single $ Length len Glissando
   127 -> single $ Length len Trill
   _ -> none
-interpret (Point (MIDI.TextEvent str)) = case str of
+interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
   (readMood -> Just m) -> single $ Point $ Mood m
   (readTrainer -> Just (t, "key")) -> single $ Point $ Trainer t
   _ -> none
@@ -59,10 +61,10 @@ interpret _ = none
 
 uninterpret :: Uninterpreter (T Beats) (MIDI.T Beats)
 uninterpret (Point p) = (:[]) $ case p of
-  LaneShift rng -> MIDI.blip $ V.toPitch $ [0, 2, 4, 5, 7, 9] !! fromEnum rng
-  Trainer t -> Point $ MIDI.TextEvent $ showTrainer t "key"
-  Mood m -> Point $ MIDI.TextEvent $ showMood m
-uninterpret (Length len l) = (:[]) $ Length len $ MIDI.standardNote $ case l of
+  LaneShift rng -> blip $ V.toPitch $ [0, 2, 4, 5, 7, 9] !! fromEnum rng
+  Trainer t -> Point . E.MetaEvent . M.TextEvent $ showTrainer t "key"
+  Mood m -> Point . E.MetaEvent . M.TextEvent $ showMood m
+uninterpret (Length len l) = (:[]) $ Length len $ standardNote $ case l of
   Solo -> V.toPitch 115
   Glissando -> V.toPitch 126
   Trill -> V.toPitch 127

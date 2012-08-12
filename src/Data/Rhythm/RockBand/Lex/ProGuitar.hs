@@ -1,12 +1,14 @@
-{-# LANGUAGE MultiParamTypeClasses, PatternGuards #-}
+{-# LANGUAGE PatternGuards #-}
 -- | The contents of the \"PART REAL_GUITAR\", \"PART REAL_GUITAR_22\",
 -- \"PART REAL_BASS\", and \"PART REAL_BASS_22\" tracks.
 module Data.Rhythm.RockBand.Lex.ProGuitar where
 
 import Data.Rhythm.RockBand.Common
+import qualified Sound.MIDI.File.Event as E
+import qualified Sound.MIDI.File.Event.Meta as M
 import qualified Sound.MIDI.Message.Channel as C
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
 import qualified Numeric.NonNegative.Class as NN
@@ -108,7 +110,7 @@ interpret (Length len (MIDI.Note ch p vel)) = case V.fromPitch p of
   126 -> single $ Length len Tremolo
   127 -> single $ Length len Trill
   _ -> none
-interpret (Point (MIDI.TextEvent str)) = case readTrainer str of
+interpret (Point (E.MetaEvent (M.TextEvent str))) = case readTrainer str of
   Just (t, "pg") -> single $ Point $ TrainerGtr t
   Just (t, "pb") -> single $ Point $ TrainerBass t
   _ -> case readChordName str of
@@ -121,7 +123,7 @@ readChordName str
   | Just (x:xs) <- stripPrefix "[chrd" str
   , elem x "0123"
   , let diff = toEnum $ read [x]
-  , Just name <- MIDI.stripSuffix "]" $ dropWhile isSpace xs
+  , Just name <- stripSuffix "]" $ dropWhile isSpace xs
   = Just (diff, name)
   | otherwise = Nothing
 

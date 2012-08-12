@@ -3,14 +3,16 @@
 module Data.Rhythm.RockBand.Lex.Basic where
 
 import Data.Rhythm.RockBand.Common
-import qualified Sound.MIDI.Message.Channel.Voice as V
 import Control.Monad
 import Data.Rhythm.Event
 import Data.List (stripPrefix)
-import qualified Data.Rhythm.RockBand.Lex.MIDI as MIDI
+import qualified Data.Rhythm.MIDI as MIDI
 import Control.Applicative ((<$>))
 import Data.Rhythm.Interpret
 import Data.Rhythm.Guitar.Base
+import qualified Sound.MIDI.File.Event as E
+import qualified Sound.MIDI.File.Event.Meta as M
+import qualified Sound.MIDI.Message.Channel.Voice as V
 
 data Length
   = Solo
@@ -96,7 +98,7 @@ interpret (Length b (MIDI.Note _ p _)) = case V.fromPitch p of
   126 -> single $ Length b Tremolo
   127 -> single $ Length b Trill
   _ -> none
-interpret (Point (MIDI.TextEvent str)) = case str of
+interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
   (readMood -> Just m) -> single $ Point $ Mood m
   (readHandMap -> Just hm) -> single $ Point $ HandMap hm
   (readStrumMap -> Just sm) -> single $ Point $ StrumMap sm
@@ -142,11 +144,11 @@ showStrumMap Pick = "[map StrumMap_Pick]"
 showStrumMap SlapBass = "[map StrumMap_SlapBass]"
 
 uninterpret :: Uninterpreter (T t) (MIDI.T t)
-uninterpret (Point p) = (:[]) . Point . MIDI.TextEvent $ case p of
+uninterpret (Point p) = (:[]) . Point . E.MetaEvent . M.TextEvent $ case p of
   Mood m -> showMood m
   HandMap hm -> showHandMap hm
   StrumMap sm -> showStrumMap sm
-uninterpret (Length len l) = Length len . MIDI.standardNote . V.toPitch <$>
+uninterpret (Length len l) = Length len . standardNote . V.toPitch <$>
   case l of
     Solo -> [103]
     Tremolo -> [126]
