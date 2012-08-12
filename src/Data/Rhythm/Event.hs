@@ -1,14 +1,16 @@
 {- |
 
 The Event container stores events that have two different subtypes, for events
-with duration and events that are just single points in time. There are two ways
-you can use the Event type, depending on how it is parametrized.
+with duration (\"Long\") and events that are just single points in time
+(\"Point\"). There are two ways you can use the Event type, depending on how it
+is parametrized.
 
-  * A duration event can store a numeric type, the length of the event.
-    The FeedBack .chart format works this way.
+* A Long event can store a number, the length of the event. FeedBack .chart
+  files work this way. This is called \"unified\" format.
 
-  * A duration event can store a Bool, which says whether it is the beginning
-    (True) or end (False) of an event.
+* A Long event can store a Bool, which says whether it is the beginning
+  (True) or end (False) of an event. Standard MIDI files work this way. This is
+  called \"switch\" format.
 
 -}
 module Data.Rhythm.Event where
@@ -28,8 +30,8 @@ class (Ord a) => Long a where
   -- | Returns a single event representing the on/off pair (first argument is
   -- on, second is off). Default implementation uses 'match' and then returns
   -- the first argument, so you can usually just override 'match'.
-  condense :: a -> a -> Maybe a
-  condense x y = guard (match x y) >> Just x
+  unify :: a -> a -> Maybe a
+  unify x y = guard (match x y) >> Just x
 
 data Event l p t
   = Length t l -- ^ An event that has start and end points.
@@ -43,9 +45,9 @@ instance Functor (Event l p) where
 -- | Convert from events that store a length to separate on/off events. Each
 -- duration-event is split into an on-event and an off-event, both with the same
 -- value as the old duration event.
-lengthToSwitch :: (NN.C t, Long l, Ord p) =>
+toSwitch :: (NN.C t, Long l, Ord p) =>
   RTB.T t (Event l p t) -> RTB.T t (Event l p Bool)
-lengthToSwitch = rtbJoin . fmap f where
+toSwitch = rtbJoin . fmap f where
   f (Point x) = RTB.singleton NN.zero (Point x)
   f (Length dt x) = RTB.fromPairList
     [(NN.zero, Length True x), (dt, Length False x)]
@@ -60,20 +62,20 @@ extractFirst f rtb = RTB.viewL rtb >>= \((dt, x), rest) -> case f x of
     Just ((dt + pos, y), RTB.cons dt x rest')
 
 -- | Converts from separate on/off events to events that store a length. An
--- on-event and off-event will be joined according to the 'condense' method of
+-- on-event and off-event will be joined according to the 'unify' method of
 -- the 'Long' class.
-switchToLength :: (NN.C t, Long l, Ord p, Num t) =>
+toUnified :: (NN.C t, Long l, Ord p, Num t) =>
   RTB.T t (Event l p Bool) -> RTB.T t (Event l p t)
-switchToLength rtb = case RTB.viewL rtb of
+toUnified rtb = case RTB.viewL rtb of
   Nothing -> RTB.empty
-  Just ((dt, Point p), rest) -> RTB.cons dt (Point p) $ switchToLength rest
-  Just ((dt, Length False _), rest) -> RTB.delay dt $ switchToLength rest
+  Just ((dt, Point p), rest) -> RTB.cons dt (Point p) $ toUnified rest
+  Just ((dt, Length False _), rest) -> RTB.delay dt $ toUnified rest
     -- An end with no start before it is dropped.
   Just ((dt, Length True x), rest) ->
-    case extractFirst (isEnd >=> condense x) rest of
-      Nothing -> RTB.delay dt $ switchToLength rest
+    case extractFirst (isEnd >=> unify x) rest of
+      Nothing -> RTB.delay dt $ toUnified rest
         -- A start with no end after it is dropped.
-      Just ((p, y), rest') -> RTB.cons dt (Length p y) $ switchToLength rest'
+      Just ((p, y), rest') -> RTB.cons dt (Length p y) $ toUnified rest'
       where isEnd (Length False l) = Just l; isEnd _ = Nothing
 
 toBeatTrack' :: Functor f =>
