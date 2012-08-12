@@ -11,6 +11,7 @@ type Tuning a = [a]
 play :: (Num a) => SixString -> GtrFret -> Tuning a -> a
 play s f t = (t !! fromEnum s) + fromIntegral f
 
+-- | The MIDI pitches of standard (EADGBE) guitar tuning.
 stdTuning :: (Num a) => Tuning a
 stdTuning = [40, 45, 50, 55, 59, 64]
 
@@ -22,6 +23,7 @@ toOffsets = zipWith subtract stdTuning
 fromOffsets :: (Num a) => Tuning a -> Tuning a
 fromOffsets = zipWith (+) stdTuning
 
+-- | The MIDI pitches of drop D (DADGBE) guitar tuning.
 dropD :: (Num a) => Tuning a
 dropD = fromOffsets [-2, 0, 0, 0, 0, 0]
 

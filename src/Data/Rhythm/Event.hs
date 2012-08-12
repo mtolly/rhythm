@@ -61,7 +61,7 @@ extractFirst f rtb = RTB.viewL rtb >>= \((dt, x), rest) -> case f x of
 
 -- | Converts from separate on/off events to events that store a length. An
 -- on-event and off-event will be joined according to the 'condense' method of
--- the 'Duration' class.
+-- the 'Long' class.
 switchToLength :: (NN.C t, Long l, Ord p, Num t) =>
   RTB.T t (Event l p Bool) -> RTB.T t (Event l p t)
 switchToLength rtb = case RTB.viewL rtb of

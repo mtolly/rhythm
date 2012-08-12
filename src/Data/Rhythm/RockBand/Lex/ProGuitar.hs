@@ -73,26 +73,26 @@ interpret (Length len (MIDI.Note ch p vel)) = case V.fromPitch p of
   18 -> single $ Point $ UnknownPitch18 ch vel
   i | let (oct, k) = quotRem i 12
     , elem oct [2,4,6,8]
-    , let lengthDiff = Length len . DiffEvent (toEnum $ quot oct 2 - 1)
+    , let makeDiff = single . Length len . DiffEvent (toEnum $ quot oct 2 - 1)
     -> case k of
-      6 -> single $ lengthDiff ForceHOPO
+      6 -> makeDiff ForceHOPO
       7 -> case C.fromChannel ch of
-        0   -> single $ lengthDiff $ Slide NormalSlide
-        11  -> single $ lengthDiff $ Slide ReversedSlide
-        ch' -> warn w >> single (lengthDiff $ Slide NormalSlide) where
+        0   -> makeDiff $ Slide NormalSlide
+        11  -> makeDiff $ Slide ReversedSlide
+        ch' -> warn w >> makeDiff (Slide NormalSlide) where
           w = "Slide marker (pitch " ++ show i ++
             ") has unknown channel " ++ show ch'
-      8 -> single $ lengthDiff Arpeggio
+      8 -> makeDiff Arpeggio
       9 -> case C.fromChannel ch of
-        13 -> single $ lengthDiff $ PartialChord High
-        14 -> single $ lengthDiff $ PartialChord Mid
-        15 -> single $ lengthDiff $ PartialChord Low
-        ch'  -> warn w >> single (lengthDiff $ PartialChord Mid) where
+        13 -> makeDiff $ PartialChord High
+        14 -> makeDiff $ PartialChord Mid
+        15 -> makeDiff $ PartialChord Low
+        ch'  -> warn w >> makeDiff (PartialChord Mid) where
           w = "Partial chord marker (pitch " ++ show i ++
             ") has unknown channel " ++ show ch'
-      10 -> single $ lengthDiff $ UnknownBFlat ch vel
-      11 -> single $ lengthDiff AllFrets
-      _ -> single $ lengthDiff $ Note nstr nfret ntyp where
+      10 -> makeDiff $ UnknownBFlat ch vel
+      11 -> makeDiff AllFrets
+      _ -> makeDiff $ Note nstr nfret ntyp where
         nstr = toEnum k
         nfret = V.fromVelocity vel - 100
         ntyp = toEnum $ C.fromChannel ch
