@@ -16,7 +16,7 @@ import qualified Numeric.NonNegative.Class as NN
 import Control.Applicative
 import Data.Ratio
 
-data MIDI a = MIDI
+data File a = File
   -- | Ticks per beat for storing the MIDI file.
   { resolution :: Resolution
   -- | The tempo change events from the first MIDI track.
@@ -35,47 +35,49 @@ type T = Event Note E.T
 
 data Note = Note C.Channel V.Pitch V.Velocity
   deriving (Eq, Ord, Show)
-instance Long Note
 
-toT :: E.T -> T Bool
-toT (E.MIDIEvent (C.Cons ch (C.Voice (V.NoteOff p v)))) =
+instance Long Note where
+  match (Note c0 p0 _) (Note c1 p1 _) = c0 == c1 && p0 == p1
+
+standardEvent :: E.T -> T Bool
+standardEvent (E.MIDIEvent (C.Cons ch (C.Voice (V.NoteOff p v)))) =
   Length False $ Note ch p v
-toT (E.MIDIEvent (C.Cons ch (C.Voice (V.NoteOn p v)))) =
+standardEvent (E.MIDIEvent (C.Cons ch (C.Voice (V.NoteOn p v)))) =
   Length (V.fromVelocity v /= 0) $ Note ch p v
-toT evt = Point evt
+standardEvent evt = Point evt
 
-fromT :: T Bool -> E.T
-fromT (Length b (Note ch p v)) =
+rawEvent :: T Bool -> E.T
+rawEvent (Length b (Note ch p v)) =
   E.MIDIEvent $ C.Cons ch $ C.Voice $ (if b then V.NoteOn else V.NoteOff) p v
-fromT (Point evt) = evt
+rawEvent (Point evt) = evt
 
-midiToUnified :: MIDI Bool -> MIDI Beats
-midiToUnified m = MIDI
+midiToUnified :: File Bool -> File Beats
+midiToUnified m = File
   { resolution = resolution m
   , tempoTrack = tempoTrack m
   , signatureTrack = signatureTrack m
   , trackZero = toUnified $ trackZero m
   , tracks = map (fmap toUnified) $ tracks m }
 
-midiToSwitch :: MIDI Beats -> MIDI Bool
-midiToSwitch m = MIDI
+midiToSwitch :: File Beats -> File Bool
+midiToSwitch m = File
   { resolution = resolution m
   , tempoTrack = tempoTrack m
   , signatureTrack = signatureTrack m
   , trackZero = toSwitch $ trackZero m
   , tracks = map (fmap toSwitch) $ tracks m }
 
-toMIDI :: F.T -> Maybe (MIDI Bool)
-toMIDI (F.Cons F.Parallel (F.Ticks tmp) trks) =
+standardFile :: F.T -> Maybe (File Bool)
+standardFile (F.Cons F.Parallel (F.Ticks tmp) trks) =
   Just $ (splitMetaTrack res th) { tracks = map extractName tt } where
     res = fromIntegral tmp
-    (th, tt) = case map (fmap toT . toBeatTrack res) trks of
+    (th, tt) = case map (fmap standardEvent . toBeatTrack res) trks of
       [] -> (RTB.empty, [])
       x : xs -> (x, xs)
-toMIDI _ = Nothing
+standardFile _ = Nothing
 
-fromMIDI :: MIDI Bool -> Either TimeSignature F.T
-fromMIDI m = let
+rawFile :: File Bool -> Either TimeSignature F.T
+rawFile m = let
   res = resolution m
   tempo = fmap (\bpm -> Point $ E.MetaEvent $ M.SetTempo $ floor $ recip bpm * 60000) $ tempoTrack m
   restTracks = map attachName $ tracks m
@@ -87,7 +89,7 @@ fromMIDI m = let
       Just ((_, sig), _) -> Left sig
   in eitherSigs >>= \sigs -> return $ let
     allMeta = RTB.merge tempo $ RTB.merge sigs $ trackZero m
-    allTracks = map (toTickTrack res . fmap fromT) $ allMeta : restTracks
+    allTracks = map (toTickTrack res . fmap rawEvent) $ allMeta : restTracks
     in F.Cons F.Parallel (F.Ticks $ fromIntegral res) allTracks
 
 extractName :: (NN.C t) => RTB.T t (T a) -> (Maybe String, RTB.T t (T a))
@@ -99,14 +101,14 @@ extractName rtb = case RTB.viewL rtb of
     | otherwise -> (Nothing, rtb)
   _ -> (Nothing, RTB.empty)
 
-getTrack :: String -> MIDI a -> Maybe (RTB.T Beats (T a))
+getTrack :: String -> File a -> Maybe (RTB.T Beats (T a))
 getTrack str m = lookup (Just str) $ tracks m
 
-deleteTrack :: String -> MIDI a -> MIDI a
+deleteTrack :: String -> File a -> File a
 deleteTrack str m = m { tracks = filter (\(x, _) -> x /= Just str) $ tracks m }
 
-splitMetaTrack :: Resolution -> RTB.T Beats (T a) -> MIDI a
-splitMetaTrack res rtb = MIDI res tempo (validSignatures tsigs) t0 [] where
+splitMetaTrack :: Resolution -> RTB.T Beats (T a) -> File a
+splitMetaTrack res rtb = File res tempo (validSignatures tsigs) t0 [] where
   (tempo, rtb') = RTB.partitionMaybe getBPM rtb
   (tsigs, t0) = RTB.partitionMaybe getTSig rtb'
   
@@ -116,7 +118,7 @@ splitMetaTrack res rtb = MIDI res tempo (validSignatures tsigs) t0 [] where
   getBPM _ = Nothing
   
   getTSig (Point (E.MetaEvent (M.TimeSig n d _ _))) =
-    Just $ TimeSignature (fromIntegral n) $ 2 ^ (2 - d)
+    Just $ TimeSignature (fromIntegral n) $ 2 ^^ (2 - d)
     -- "d" is neg. power of 2. so d=2 means 2^-2 = qnote. d=3 means 2^-3 = 8th.
   getTSig _ = Nothing
 
