@@ -23,8 +23,18 @@ import qualified Sound.MIDI.File.Save as Save
 
 import System.Environment (getArgs)
 import Data.Char (toUpper)
-import Control.Applicative ((<|>))
+import Control.Applicative ((<|>), Applicative)
 import Data.Maybe (fromMaybe)
+import Data.Traversable (traverse)
+import Control.Monad.Trans.State
+
+playInstant :: [PG.DiffEvent] -> State [MPA.GtrFret] [MPA.GtrMessage]
+playInstant = undefined
+
+play :: (NN.C t) => RTB.T t PG.DiffEvent -> RTB.T t MPA.GtrMessage
+play rtb = evalState (mapMCoincident playInstant rtb) [] where
+  mapMCoincident :: (Applicative f, NN.C t) => ([a] -> f [b]) -> RTB.T t a -> f (RTB.T t b)
+  mapMCoincident f = fmap RTB.flatten . traverse f . RTB.collectCoincident
 
 autoplayEvent :: PG.DiffEvent -> [MPA.GtrMessage]
 autoplayEvent (PG.Note str frt typ) = case typ of
