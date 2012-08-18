@@ -25,11 +25,12 @@ Library
 
                     Data.Rhythm.RockBand.Common
                     
-                    Data.Rhythm.RockBand.Lex.Events
+                    Data.Rhythm.RockBand.Lex.File
                     Data.Rhythm.RockBand.Lex.Beat
-                    Data.Rhythm.RockBand.Lex.Vocals
+                    Data.Rhythm.RockBand.Lex.Events
                     Data.Rhythm.RockBand.Lex.Drums
                     Data.Rhythm.RockBand.Lex.Basic
+                    Data.Rhythm.RockBand.Lex.Vocals
                     Data.Rhythm.RockBand.Lex.ProKeys
                     Data.Rhythm.RockBand.Lex.ProGuitar
                    

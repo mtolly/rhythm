@@ -23,48 +23,75 @@ import qualified Sound.MIDI.File.Save as Save
 
 import System.Environment (getArgs)
 import Data.Char (toUpper)
-import Control.Applicative ((<|>), Applicative)
-import Data.Maybe (fromMaybe)
-import Data.Traversable (traverse)
+import Control.Applicative
+import Control.Monad
+import Data.Maybe
+import Data.Traversable
 import Control.Monad.Trans.State
+import Data.List (nubBy)
+import Data.Ord (comparing)
+import Data.Function (on)
 
-playInstant :: [PG.DiffEvent] -> State [MPA.GtrFret] [MPA.GtrMessage]
-playInstant = undefined
+import qualified Data.Map as Map
+
+-- | Removes redundant fret change events.
+cleanup :: (NN.C t) => RTB.T t MPA.GtrMessage -> RTB.T t MPA.GtrMessage
+cleanup rtb = evalState (rtbFilterA f rtb) Map.empty where
+  f :: MPA.GtrMessage -> State (Map.Map MPA.GtrString MPA.GtrFret) Bool
+  f (MPA.Strum _ _) = return True
+  f (MPA.Fret s f) = do
+    redundant <- gets $ \mp -> Map.lookup s mp == Just f
+    if redundant then return False
+      else modify (Map.insert s f) >> return True
+
+rtbFilterA :: (NN.C t, Applicative f) =>
+  (a -> f Bool) -> RTB.T t a -> f (RTB.T t a)
+rtbFilterA g = fmap (RTB.mapMaybe ifSnd) . traverse attachG where
+  ifSnd (x, b) = guard b >> Just x
+  attachG x = (\b -> (x, b)) <$> g x
+
+playEvent :: [PG.DiffEvent] -> [MPA.GtrMessage]
+playEvent evts = fretMsgs ++ strumMsgs where
+
+  strumMsg s = MPA.Strum (toEnum $ fromEnum s) $ V.toVelocity 96
+  strummed = forMaybe evts $ \evt -> case evt of
+    PG.Note s _ t | notElem t [PG.ArpeggioForm, PG.Tapped] -> Just s
+    _ -> Nothing
+  strumMsgs = map strumMsg strummed
+  
+  fretMsg (s, f) = MPA.Fret (toEnum $ fromEnum s) $ MPA.GtrFret f
+  fretted = forMaybe evts $ \evt -> case evt of
+    PG.Note s f t | t /= PG.ArpeggioForm -> Just (s, f)
+    _ -> Nothing
+  fretZero = [ (s, 0) | s <- [minBound .. maxBound] ]
+  fretMsgs = map fretMsg $ nubBy ((==) `on` fst) $ fretted ++ fretZero
+  
+  forMaybe = flip mapMaybe
 
 play :: (NN.C t) => RTB.T t PG.DiffEvent -> RTB.T t MPA.GtrMessage
-play rtb = evalState (mapMCoincident playInstant rtb) [] where
-  mapMCoincident :: (Applicative f, NN.C t) => ([a] -> f [b]) -> RTB.T t a -> f (RTB.T t b)
-  mapMCoincident f = fmap RTB.flatten . traverse f . RTB.collectCoincident
+play = cleanup . RTB.mapCoincident playEvent
 
-autoplayEvent :: PG.DiffEvent -> [MPA.GtrMessage]
-autoplayEvent (PG.Note str frt typ) = case typ of
-  PG.ArpeggioForm -> []
-  _ -> [MPA.Fret str' frt', MPA.Strum str' vel] where
-    str' = toEnum $ fromEnum str
-    frt' = MPA.GtrFret frt
-    vel = V.toVelocity 96
-autoplayEvent _ = []
-
-autoplay :: (NN.C t) => RTB.T t PG.DiffEvent -> RTB.T t MPA.GtrMessage
-autoplay = RTB.cons NN.zero MPA.KeepAlive . RTB.flatten . fmap autoplayEvent
-
-getDiffEvents :: (NN.C t) => Difficulty -> RTB.T t (PG.T t) -> RTB.T t PG.DiffEvent
+getDiffEvents :: (NN.C t) =>
+  Difficulty -> RTB.T t (PG.T t) -> RTB.T t PG.DiffEvent
 getDiffEvents d = RTB.mapMaybe $ \x -> case x of
   Length _ (PG.DiffEvent d' evt) | d == d' -> Just evt
   _ -> Nothing
 
 toMIDI :: RTB.T t MPA.GtrEvent -> RTB.T t E.T
-toMIDI = fmap $ E.SystemExclusive . SysEx.Regular . (++ [0xF7]) . MPA.fromGtrEvent
+toMIDI =
+  fmap $ E.SystemExclusive . SysEx.Regular . (++ [0xF7]) . MPA.fromGtrEvent
 
 -------------
 
-pgToMIDI :: (NN.C t) => MPA.GtrController -> Difficulty -> RTB.T t (PG.T t) -> RTB.T t E.T
-pgToMIDI c d = toMIDI . fmap (MPA.GtrEvent c) . autoplay . getDiffEvents d
+pgToMIDI :: (NN.C t) =>
+  MPA.GtrController -> Difficulty -> RTB.T t (PG.T t) -> RTB.T t E.T
+pgToMIDI c d = toMIDI . fmap (MPA.GtrEvent c) . play . getDiffEvents d
 
 data Instrument = Guitar | Bass
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-getPG :: MPA.GtrController -> Instrument -> MIDI.File Bool -> RTB.T Beats (PG.T Beats)
+getPG ::
+  MPA.GtrController -> Instrument -> MIDI.File Bool -> RTB.T Beats (PG.T Beats)
 getPG c i mid = go $ fromMaybe (error "MIDI track not found") $ case c of
   MPA.Squier -> MIDI.getTrack name22 mid <|> MIDI.getTrack name17 mid
   MPA.Mustang -> MIDI.getTrack name17 mid
@@ -72,7 +99,8 @@ getPG c i mid = go $ fromMaybe (error "MIDI track not found") $ case c of
         name17 = "PART REAL_" ++ map toUpper (show i)
         name22 = name17 ++ "_22"
 
-run :: MPA.GtrController -> Instrument -> Difficulty -> FilePath -> FilePath -> IO ()
+run ::
+  MPA.GtrController -> Instrument -> Difficulty -> FilePath -> FilePath -> IO ()
 run c i d fin fout = Load.fromFile fin >>= \f -> case MIDI.standardFile f of
   Nothing -> putStrLn "Not a type-1 ticks-based MIDI file"
   Just m -> let
