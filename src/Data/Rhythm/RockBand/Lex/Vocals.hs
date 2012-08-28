@@ -36,7 +36,9 @@ data Length
   | Note V.Pitch
   deriving (Eq, Ord, Show)
 
-instance Long Length
+instance Long Length where
+  match (Note _) (Note _) = True
+  match x y = x == y
 type T = Event Length Point
 
 data PercussionType

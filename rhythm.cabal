@@ -11,7 +11,7 @@ Category:           Data
 
 Library
   Build-Depends:    base >= 4 && <= 5, non-negative, event-list, midi,
-                    transformers, array, pretty, bytestring, binary
+                    transformers, array, pretty, bytestring, binary, inflist
   Exposed-modules:  Data.Rhythm.Time
                     Data.Rhythm.Event
                     Data.Rhythm.Interpret

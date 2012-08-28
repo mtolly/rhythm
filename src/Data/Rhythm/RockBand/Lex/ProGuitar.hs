@@ -18,7 +18,13 @@ import Data.Maybe (listToMaybe)
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Rhythm.Guitar.Base
 
-instance Long Length
+instance Long Length where
+  match (DiffEvent d0 (Slide _)) (DiffEvent d1 (Slide _)) = d0 == d1
+  match (DiffEvent d0 (PartialChord _)) (DiffEvent d1 (PartialChord _)) =
+    d0 == d1
+  match (DiffEvent d0 (UnknownBFlat _ _)) (DiffEvent d1 (UnknownBFlat _ _)) =
+    d0 == d1
+  match x y = x == y
 type T = Event Length Point
 
 data Point
