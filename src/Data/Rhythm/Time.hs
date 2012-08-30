@@ -146,9 +146,9 @@ infix 5 // -- lower than (+) (-) (*) (/), same level as (:)
 getMeasurePosn :: SignatureTrack -> Beats -> MeasurePosn
 getMeasurePosn sigs = go 0 $ measureLengths sigs where
   go :: Measures -> I.InfList Beats -> Beats -> MeasurePosn
-  go !m (x I.::: xs) left = if left < x
-    then MeasurePosn m left
-    else go (m + 1) xs (left - x)
+  go !m (x I.::: xs) left = case NN.split left x of
+    (_, (False, _)) {- left <  x -} -> MeasurePosn m left
+    (_, (True , d)) {- left >= x -} -> go (succ m) xs d
 
 -- | Converts a position from measures & beats to just beats.
 getBeatPosn :: SignatureTrack -> MeasurePosn -> Beats
