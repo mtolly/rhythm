@@ -15,6 +15,7 @@ Library
   Exposed-modules:  Data.Rhythm.Time
                     Data.Rhythm.Event
                     Data.Rhythm.Interpret
+                    Data.Rhythm.Status
                     
                     Data.Rhythm.FeedBack
                     Data.Rhythm.FeedBack.Lex
