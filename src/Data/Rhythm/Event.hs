@@ -45,9 +45,9 @@ instance Functor (Event l p) where
 -- | Convert from events that store a length to separate on/off events. Each
 -- duration-event is split into an on-event and an off-event, both with the same
 -- value as the old duration event.
-toSwitch :: (NN.C t, Long l, Ord p) =>
+splitEvents :: (NN.C t, Long l, Ord p) =>
   RTB.T t (Event l p t) -> RTB.T t (Event l p Bool)
-toSwitch = rtbJoin . fmap f where
+splitEvents = rtbJoin . fmap f where
   f (Point x) = RTB.singleton NN.zero (Point x)
   f (Length dt x) = RTB.fromPairList
     [(NN.zero, Length True x), (dt, Length False x)]
@@ -64,27 +64,27 @@ extractFirst f rtb = RTB.viewL rtb >>= \((dt, x), rest) -> case f x of
 -- | Converts from separate on/off events to events that store a length. An
 -- on-event and off-event will be joined according to the 'unify' method of
 -- the 'Long' class.
-toUnified :: (NN.C t, Long l, Ord p, Num t) =>
+unifyEvents :: (NN.C t, Long l, Ord p, Num t) =>
   RTB.T t (Event l p Bool) -> RTB.T t (Event l p t)
-toUnified rtb = case RTB.viewL rtb of
+unifyEvents rtb = case RTB.viewL rtb of
   Nothing -> RTB.empty
-  Just ((dt, Point p), rest) -> RTB.cons dt (Point p) $ toUnified rest
-  Just ((dt, Length False _), rest) -> RTB.delay dt $ toUnified rest
+  Just ((dt, Point p), rest) -> RTB.cons dt (Point p) $ unifyEvents rest
+  Just ((dt, Length False _), rest) -> RTB.delay dt $ unifyEvents rest
     -- An end with no start before it is dropped.
   Just ((dt, Length True x), rest) ->
     case extractFirst (isEnd >=> unify x) rest of
-      Nothing -> RTB.delay dt $ toUnified rest
+      Nothing -> RTB.delay dt $ unifyEvents rest
         -- A start with no end after it is dropped.
-      Just ((p, y), rest') -> RTB.cons dt (Length p y) $ toUnified rest'
+      Just ((p, y), rest') -> RTB.cons dt (Length p y) $ unifyEvents rest'
       where isEnd (Length False l) = Just l; isEnd _ = Nothing
 
-fromTickTrack' :: Functor f =>
+fromTickEvents :: Functor f =>
   Resolution -> RTB.T Ticks (f Ticks) -> RTB.T Beats (f Beats)
-fromTickTrack' res = fromTickTrack res . fmap (fmap $ fromTicks res)
+fromTickEvents res = fromTickTrack res . fmap (fmap $ fromTicks res)
 
-toTickTrack' :: Functor f =>
+toTickEvents :: Functor f =>
   Resolution -> RTB.T Beats (f Beats) -> RTB.T Ticks (f Ticks)
-toTickTrack' res = toTickTrack res . fmap (fmap $ toTicks res)
+toTickEvents res = toTickTrack res . fmap (fmap $ toTicks res)
 
 -- | The smallest resolution needed to represent all event positions and
 -- durations correctly.

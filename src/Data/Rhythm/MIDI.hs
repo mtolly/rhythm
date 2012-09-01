@@ -56,16 +56,16 @@ midiToUnified m = File
   { resolution = resolution m
   , tempoTrack = tempoTrack m
   , signatureTrack = signatureTrack m
-  , trackZero = toUnified $ trackZero m
-  , tracks = map (fmap toUnified) $ tracks m }
+  , trackZero = unifyEvents $ trackZero m
+  , tracks = map (fmap unifyEvents) $ tracks m }
 
 midiToSwitch :: File Beats -> File Bool
 midiToSwitch m = File
   { resolution = resolution m
   , tempoTrack = tempoTrack m
   , signatureTrack = signatureTrack m
-  , trackZero = toSwitch $ trackZero m
-  , tracks = map (fmap toSwitch) $ tracks m }
+  , trackZero = splitEvents $ trackZero m
+  , tracks = map (fmap splitEvents) $ tracks m }
 
 standardFile :: F.T -> Maybe (File Bool)
 standardFile (F.Cons F.Parallel (F.Ticks tmp) trks) =
