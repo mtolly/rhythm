@@ -78,9 +78,9 @@ toUnified rtb = case RTB.viewL rtb of
       Just ((p, y), rest') -> RTB.cons dt (Length p y) $ toUnified rest'
       where isEnd (Length False l) = Just l; isEnd _ = Nothing
 
-toBeatTrack' :: Functor f =>
+fromTickTrack' :: Functor f =>
   Resolution -> RTB.T Ticks (f Ticks) -> RTB.T Beats (f Beats)
-toBeatTrack' res = toBeatTrack res . fmap (fmap $ toBeats res)
+fromTickTrack' res = fromTickTrack res . fmap (fmap $ fromTicks res)
 
 toTickTrack' :: Functor f =>
   Resolution -> RTB.T Beats (f Beats) -> RTB.T Ticks (f Ticks)

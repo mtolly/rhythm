@@ -71,7 +71,7 @@ standardFile :: F.T -> Maybe (File Bool)
 standardFile (F.Cons F.Parallel (F.Ticks tmp) trks) =
   Just $ (splitMetaTrack res th) { tracks = map extractName tt } where
     res = fromIntegral tmp
-    (th, tt) = case map (fmap standardEvent . toBeatTrack res) trks of
+    (th, tt) = case map (fmap standardEvent . fromTickTrack res) trks of
       [] -> (RTB.empty, [])
       x : xs -> (x, xs)
 standardFile _ = Nothing

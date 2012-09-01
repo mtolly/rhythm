@@ -34,21 +34,20 @@ type Seconds = NN.Rational
 -- | A tempo, in beats per minute.
 type BPM = NN.Rational
 
-toBeats :: Resolution -> Ticks -> Beats
-toBeats res tks = NN.fromNumberUnsafe $ fromIntegral tks / fromIntegral res
+fromTicks :: Resolution -> Ticks -> Beats
+fromTicks res tks = NN.fromNumberUnsafe $ fromIntegral tks / fromIntegral res
 
 -- | Converts a rational duration to integer ticks. If converting multiple
 -- consecutive durations, use 'toTickTrack' instead to avoid rounding error.
 toTicks :: Resolution -> Beats -> Ticks
 toTicks res bts = NN.fromNumberUnsafe $ floor $ bts * fromIntegral res
 
-toBeatTrack :: Resolution -> RTB.T Ticks a -> RTB.T Beats a
-toBeatTrack res = RTB.mapTime (toBeats res)
+fromTickTrack :: Resolution -> RTB.T Ticks a -> RTB.T Beats a
+fromTickTrack res = RTB.mapTime (fromTicks res)
 
--- | Rounds each beat duration to an integral tick value. The rounding errors
--- are kept track of, and corrected for.
+-- | Rounds each beat duration to an integral value, correcting for rounding
+-- errors.
 toTickTrack :: Resolution -> RTB.T Beats a -> RTB.T Ticks a
--- RTB.discretize ensures that rounding errors don't accumulate.
 toTickTrack res = RTB.discretize .
   RTB.mapTime (* (NN.fromNumberUnsafe $ fromIntegral res))
 
@@ -60,32 +59,38 @@ minResolution = NN.fromNumberUnsafe . foldr (lcm . denominator . NN.toNumber) 1
 minTrackResolution :: RTB.T Beats a -> Resolution
 minTrackResolution = minResolution . RTB.getTimes
 
+toTime :: BPM -> Beats -> Seconds
+toTime bpm bts = (bts / bpm) * 60
+
+fromTime :: BPM -> Seconds -> Beats
+fromTime bpm secs = (secs / 60) * bpm
+
 -- | Uses tempos to convert an event-list from beatstamps to timestamps. If no
 -- tempo is present at time 0, 120 BPM is assumed.
-beatsToTime :: (Ord a) => RTB.T Beats BPM -> RTB.T Beats a -> RTB.T Seconds a
-beatsToTime bpms evts =
+toTimeTrack :: (Ord a) => RTB.T Beats BPM -> RTB.T Beats a -> RTB.T Seconds a
+toTimeTrack bpms evts =
   go defBPM $ RTB.merge (RTB.mapBody Left bpms) (RTB.mapBody Right evts) where
     go :: (Ord a) => BPM -> RTB.T Beats (Either BPM a) -> RTB.T Seconds a
     go bpm xs = case RTB.viewL xs of
       Nothing -> RTB.empty
-      Just ((db, x), rest) -> let dt = (db / bpm) * 60 in
-        case x of
-          Left bpm' -> RTB.delay dt $ go bpm' rest
-          Right evt -> RTB.cons dt evt $ go bpm rest
+      Just ((bts, x), rest) -> case x of
+        Left bpm' -> RTB.delay secs $ go bpm' rest
+        Right evt -> RTB.cons secs evt $ go bpm rest
+        where secs = toTime bpm bts
     defBPM = 120 -- if no tempo at position 0, we assume 120 bpm.
 
 -- | Uses tempos to convert an event-list from timestamps to beatstamps. If no
 -- tempo is present at time 0, 120 BPM is assumed.
-timeToBeats :: (Ord a) => RTB.T Seconds BPM -> RTB.T Seconds a -> RTB.T Beats a
-timeToBeats bpms evts =
+fromTimeTrack :: (Ord a) => RTB.T Seconds BPM -> RTB.T Seconds a -> RTB.T Beats a
+fromTimeTrack bpms evts =
   go defBPM $ RTB.merge (RTB.mapBody Left bpms) (RTB.mapBody Right evts) where
     go :: (Ord a) => BPM -> RTB.T Seconds (Either BPM a) -> RTB.T Beats a
     go bpm xs = case RTB.viewL xs of
       Nothing -> RTB.empty
-      Just ((dt, x), rest) -> let db = (dt / 60) * bpm in
-        case x of
-          Left bpm' -> RTB.delay db $ go bpm' rest
-          Right evt -> RTB.cons db evt $ go bpm rest
+      Just ((secs, x), rest) -> case x of
+        Left bpm' -> RTB.delay bts $ go bpm' rest
+        Right evt -> RTB.cons bts evt $ go bpm rest
+        where bts = fromTime bpm secs
     defBPM = 120 -- if no tempo at position 0, we assume 120 bpm.
 
 -- | Each event-list is merged into a new list, starting at its position in the
