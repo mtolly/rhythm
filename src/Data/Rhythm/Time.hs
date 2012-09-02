@@ -21,6 +21,7 @@ import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Ratio
 import qualified Data.InfList as I
+import qualified Data.Rhythm.Status as Status
 
 -- | A beat, or quarter note, is the most central timekeeping unit.
 type Beats = NN.Rational
@@ -65,33 +66,22 @@ toTime bpm bts = (bts / bpm) * 60
 fromTime :: BPM -> Seconds -> Beats
 fromTime bpm secs = (secs / 60) * bpm
 
--- | Uses tempos to convert an event-list from beatstamps to timestamps. If no
--- tempo is present at time 0, 120 BPM is assumed.
-toTimeTrack :: (Ord a) => RTB.T Beats BPM -> RTB.T Beats a -> RTB.T Seconds a
-toTimeTrack bpms evts =
-  go defBPM $ RTB.merge (RTB.mapBody Left bpms) (RTB.mapBody Right evts) where
-    go :: (Ord a) => BPM -> RTB.T Beats (Either BPM a) -> RTB.T Seconds a
-    go bpm xs = case RTB.viewL xs of
-      Nothing -> RTB.empty
-      Just ((bts, x), rest) -> case x of
-        Left bpm' -> RTB.delay secs $ go bpm' rest
-        Right evt -> RTB.cons secs evt $ go bpm rest
-        where secs = toTime bpm bts
-    defBPM = 120 -- if no tempo at position 0, we assume 120 bpm.
+applyTime :: (NN.C t, NN.C u) => Status.T t (t -> u) -> RTB.T t a -> RTB.T u a
+applyTime (Status.Stay f) rtb = RTB.mapTime f rtb
+applyTime (Status.For t f fs) rtb = case RTB.viewL rtb of
+  Nothing -> RTB.empty
+  Just ((u, x), xs) -> case NN.split t u of
+    (m, (b, d)) -> if b
+      then {- t <= u -} RTB.delay (f m) $ applyTime fs $ RTB.cons d x xs
+      else {- t > u -} RTB.cons (f m) x $ applyTime (Status.For d f fs) xs
 
--- | Uses tempos to convert an event-list from timestamps to beatstamps. If no
--- tempo is present at time 0, 120 BPM is assumed.
-fromTimeTrack :: (Ord a) => RTB.T Seconds BPM -> RTB.T Seconds a -> RTB.T Beats a
-fromTimeTrack bpms evts =
-  go defBPM $ RTB.merge (RTB.mapBody Left bpms) (RTB.mapBody Right evts) where
-    go :: (Ord a) => BPM -> RTB.T Seconds (Either BPM a) -> RTB.T Beats a
-    go bpm xs = case RTB.viewL xs of
-      Nothing -> RTB.empty
-      Just ((secs, x), rest) -> case x of
-        Left bpm' -> RTB.delay bts $ go bpm' rest
-        Right evt -> RTB.cons bts evt $ go bpm rest
-        where bts = fromTime bpm secs
-    defBPM = 120 -- if no tempo at position 0, we assume 120 bpm.
+-- | Uses tempos to convert an event-list from beatstamps to timestamps.
+toTimeTrack :: Status.T Beats BPM -> RTB.T Beats a -> RTB.T Seconds a
+toTimeTrack = applyTime . fmap toTime
+
+-- | Uses tempos to convert an event-list from timestamps to beatstamps.
+fromTimeTrack :: Status.T Seconds BPM -> RTB.T Seconds a -> RTB.T Beats a
+fromTimeTrack = applyTime . fmap fromTime
 
 -- | Each event-list is merged into a new list, starting at its position in the
 -- original list. This is equivalent to the monad function join, but the Monad

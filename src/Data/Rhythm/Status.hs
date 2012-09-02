@@ -12,6 +12,10 @@ import qualified Data.EventList.Relative.TimeBody as RTB
 data T t a = Stay a | For t a (T t a)
   deriving (Eq, Ord, Show, Read)
 
+instance Functor (T t) where
+  fmap g (Stay x) = Stay $ g x
+  fmap g (For t x rest) = For t (g x) $ fmap g rest
+
 -- | Removes zero-duration and redundant statuses.
 clean :: (NN.C t, Eq a) => T t a -> T t a
 clean = cleanRedundant . cleanZero
