@@ -6,6 +6,9 @@ import Prelude hiding (drop)
 import qualified Prelude as P
 import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
+import qualified Data.Foldable as Fold
+import qualified Data.Traversable as Trav
+import Control.Applicative
 
 -- | Functionally this is equivalent to 'TimeBody.T' with a guaranteed event at
 -- position zero.
@@ -15,6 +18,13 @@ data T t a = Stay a | For t a (T t a)
 instance Functor (T t) where
   fmap g (Stay x) = Stay $ g x
   fmap g (For t x rest) = For t (g x) $ fmap g rest
+
+instance Fold.Foldable (T t) where
+  foldMap = Trav.foldMapDefault
+
+instance Trav.Traversable (T t) where
+  traverse g (Stay x) = Stay <$> g x
+  traverse g (For t x rest) = liftA2 (For t) (g x) (Trav.traverse g rest)
 
 -- | Removes zero-duration and redundant statuses.
 clean :: (NN.C t, Eq a) => T t a -> T t a
@@ -64,3 +74,7 @@ drop _ s@(Stay _) = s
 drop t (For u x xs) = case NN.split t u of
   (_, (True , d)) {- t <= u -} -> For d x xs
   (_, (False, d)) {- t >  u -} -> drop d xs
+
+delay :: (NN.C t) => t -> T t a -> T t a
+delay _ s@(Stay _) = s
+delay t (For u x xs) = For (NN.add t u) x xs
