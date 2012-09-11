@@ -9,6 +9,7 @@ import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Data.Foldable as Fold
 import qualified Data.Traversable as Trav
 import Control.Applicative
+import Data.Rhythm.Time
 
 -- | Functionally this is equivalent to 'TimeBody.T' with a guaranteed event at
 -- position zero.
@@ -55,9 +56,9 @@ fromRTB x rtb = case RTB.viewL rtb of
   Just ((dt, y), rtb') -> For dt x $ fromRTB y rtb'
 
 -- | Generates an event-list of changes, with a guaranteed event at position 0.
-toRTB :: (NN.C t) => T t a -> RTB.T t a
-toRTB (Stay x) = RTB.singleton NN.zero x
-toRTB (For dt x rest) = RTB.cons NN.zero x $ RTB.delay dt $ toRTB rest
+toRTB :: (NN.C t) => T t a -> (a, RTB.T t a)
+toRTB (Stay x) = (x, RTB.empty)
+toRTB (For dt x rest) = (x, uncurry (RTB.cons dt) $ toRTB rest)
 
 -- | Gets the status at the given time position.
 get :: (NN.C t) => t -> T t a -> a
@@ -78,3 +79,26 @@ drop t (For u x xs) = case NN.split t u of
 delay :: (NN.C t) => t -> T t a -> T t a
 delay _ s@(Stay _) = s
 delay t (For u x xs) = For (NN.add t u) x xs
+
+applyTime :: (NN.C t, NN.C u) => T t (t -> u) -> RTB.T t a -> RTB.T u a
+applyTime (Stay f) rtb = RTB.mapTime f rtb
+applyTime (For t f fs) rtb = case RTB.viewL rtb of
+  Nothing -> RTB.empty
+  Just ((u, x), xs) -> case NN.split t u of
+    (m, (b, d)) -> if b
+      then {- t <= u -} RTB.delay (f m) $ applyTime fs $ RTB.cons d x xs
+      else {- t > u -} RTB.cons (f m) x $ applyTime (For d f fs) xs
+
+-- | Uses tempos to convert an event-list from beatstamps to timestamps.
+toTimeTrack :: T Beats BPM -> RTB.T Beats a -> RTB.T Seconds a
+toTimeTrack = applyTime . fmap toTime
+
+-- | Uses tempos to convert an event-list from timestamps to beatstamps.
+fromTimeTrack :: T Seconds BPM -> RTB.T Seconds a -> RTB.T Beats a
+fromTimeTrack = applyTime . fmap fromTime
+
+toTickStatus :: Resolution -> T Beats a -> T Ticks a
+toTickStatus res = uncurry fromRTB . fmap (toTickTrack res) . toRTB
+
+fromTickStatus :: Resolution -> T Ticks a -> T Beats a
+fromTickStatus res = uncurry fromRTB . fmap (fromTickTrack res) . toRTB

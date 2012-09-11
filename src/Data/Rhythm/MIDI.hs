@@ -3,19 +3,20 @@
 -- names are stored separately instead of as MIDI events.
 module Data.Rhythm.MIDI where
 
-import qualified Sound.MIDI.File as F
+-- import qualified Sound.MIDI.File as F
 import qualified Sound.MIDI.File.Event as E
-import qualified Sound.MIDI.File.Event.Meta as M
+-- import qualified Sound.MIDI.File.Event.Meta as M
 import qualified Sound.MIDI.Message.Channel as C
 import qualified Sound.MIDI.Message.Channel.Voice as V
 import Data.Rhythm.Time
+import Data.Rhythm.TimeSignature
 import Data.Rhythm.Event
 import qualified Data.EventList.Relative.TimeBody as RTB
-import qualified Numeric.NonNegative.Wrapper as NN
+-- import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Numeric.NonNegative.Class as NN
-import Control.Applicative
-import Data.Ratio
-import Data.Traversable (traverse)
+-- import Control.Applicative
+-- import Data.Ratio
+-- import Data.Traversable (traverse)
 import qualified Data.Rhythm.Status as Status
 
 data File t a = File
@@ -70,10 +71,22 @@ splitFile m = File
   , tracks = map (fmap splitEvents) $ tracks m }
 
 fromTickFile :: File Ticks a -> File Beats a
-fromTickFile = undefined
+fromTickFile f = File
+  { resolution = res
+  , tempoTrack = Status.fromTickStatus res $ tempoTrack f
+  , signatureTrack = signatureTrack f
+  , trackZero = fromTickTrack res $ trackZero f
+  , tracks = map (fmap $ fromTickTrack res) $ tracks f
+  } where res = resolution f
 
 toTickFile :: File Beats a -> File Ticks a
-toTickFile = undefined 
+toTickFile f = File
+  { resolution = res
+  , tempoTrack = Status.toTickStatus res $ tempoTrack f
+  , signatureTrack = signatureTrack f
+  , trackZero = toTickTrack res $ trackZero f
+  , tracks = map (fmap $ toTickTrack res) $ tracks f
+  } where res = resolution f
 
 -- readFile :: F.T -> Maybe (File Bool)
 -- readFile (F.Cons F.Parallel (F.Ticks tmp) trks) =
