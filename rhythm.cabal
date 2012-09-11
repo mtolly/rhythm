@@ -10,8 +10,16 @@ Cabal-version:      >= 1.8
 Category:           Data
 
 Library
-  Build-Depends:    base >= 4 && <= 5, non-negative, event-list, midi,
-                    transformers, array, pretty, bytestring, binary, inflist
+  Build-Depends:    base >= 4 && < 5,
+                    array,
+                    bytestring,
+                    pretty >= 1.1 && < 1.2,
+                    non-negative >= 0.1 && < 0.2,
+                    event-list >= 0.1 && < 0.2,
+                    midi >= 0.2 && < 0.3,
+                    transformers >= 0.3 && < 0.4,
+                    binary >= 0.5 && < 0.6,
+                    inflist >= 0.0.1 && < 0.1
   Exposed-modules:  Data.Rhythm.Time
                     Data.Rhythm.TimeSignature
                     Data.Rhythm.Event
