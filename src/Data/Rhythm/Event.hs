@@ -45,7 +45,7 @@ instance Functor (Event l p) where
 -- | Convert from events that store a length to separate on/off events. Each
 -- duration-event is split into an on-event and an off-event, both with the same
 -- value as the old duration event.
-splitEvents :: (NN.C t, Long l, Ord p) =>
+splitEvents :: (NN.C t, Ord l, Ord p) =>
   RTB.T t (Event l p t) -> RTB.T t (Event l p Bool)
 splitEvents = rtbJoin . fmap f where
   f (Point x) = RTB.singleton NN.zero (Point x)
@@ -54,17 +54,17 @@ splitEvents = rtbJoin . fmap f where
 
 -- | The first event for which the function gives a Just result is removed
 -- from the list, along with its position.
-extractFirst :: (NN.C t, Num t) =>
+extractFirst :: (NN.C t) =>
   (a -> Maybe b) -> RTB.T t a -> Maybe ((t, b), RTB.T t a)
 extractFirst f rtb = RTB.viewL rtb >>= \((dt, x), rest) -> case f x of
   Just y -> Just ((dt, y), RTB.delay dt rest)
   Nothing -> extractFirst f rest >>= \((pos, y), rest') ->
-    Just ((dt + pos, y), RTB.cons dt x rest')
+    Just ((NN.add dt pos, y), RTB.cons dt x rest')
 
 -- | Converts from separate on/off events to events that store a length. An
 -- on-event and off-event will be joined according to the 'unify' method of
 -- the 'Long' class.
-unifyEvents :: (NN.C t, Long l, Ord p, Num t) =>
+unifyEvents :: (NN.C t, Long l) =>
   RTB.T t (Event l p Bool) -> RTB.T t (Event l p t)
 unifyEvents rtb = case RTB.viewL rtb of
   Nothing -> RTB.empty

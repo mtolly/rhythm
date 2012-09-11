@@ -18,17 +18,17 @@ import Data.Ratio
 import Data.Traversable (traverse)
 import qualified Data.Rhythm.Status as Status
 
-data File a = File
+data File t a = File
   -- | Ticks per beat for storing the MIDI file.
   { resolution :: Resolution
   -- | The tempo change events from the first MIDI track.
-  , tempoTrack :: Status.T Beats BPM
+  , tempoTrack :: Status.T t BPM
   -- | The time signature events from the first MIDI track.
   , signatureTrack :: SignatureTrack
   -- | Other events (not tempos or time signatures) from the first MIDI track.
-  , trackZero :: RTB.T Beats (T a)
+  , trackZero :: RTB.T t (T a)
   -- | The parallel tracks of the type-1 MIDI file.
-  , tracks :: [(Maybe String, RTB.T Beats (T a))]
+  , tracks :: [(Maybe String, RTB.T t (T a))]
   } deriving (Eq, Ord, Show)
 
 -- | It is an error to make a Point which holds a NoteOn or NoteOff.
@@ -53,7 +53,7 @@ showEvent (Length b (Note ch p v)) =
   E.MIDIEvent $ C.Cons ch $ C.Voice $ (if b then V.NoteOn else V.NoteOff) p v
 showEvent (Point evt) = evt
 
-unifyFile :: File Bool -> File Beats
+unifyFile :: (NN.C t) => File t Bool -> File t t
 unifyFile m = File
   { resolution = resolution m
   , tempoTrack = tempoTrack m
@@ -61,13 +61,19 @@ unifyFile m = File
   , trackZero = unifyEvents $ trackZero m
   , tracks = map (fmap unifyEvents) $ tracks m }
 
-splitFile :: File Beats -> File Bool
+splitFile :: (NN.C t) => File t t -> File t Bool
 splitFile m = File
   { resolution = resolution m
   , tempoTrack = tempoTrack m
   , signatureTrack = signatureTrack m
   , trackZero = splitEvents $ trackZero m
   , tracks = map (fmap splitEvents) $ tracks m }
+
+fromTickFile :: File Ticks a -> File Beats a
+fromTickFile = undefined
+
+toTickFile :: File Beats a -> File Ticks a
+toTickFile = undefined 
 
 -- readFile :: F.T -> Maybe (File Bool)
 -- readFile (F.Cons F.Parallel (F.Ticks tmp) trks) =
