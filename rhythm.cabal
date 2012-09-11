@@ -20,6 +20,7 @@ Library
                     transformers >= 0.3 && < 0.4,
                     binary >= 0.5 && < 0.6,
                     inflist >= 0.0.1 && < 0.1
+                    
   Exposed-modules:  Data.Rhythm.Time
                     Data.Rhythm.TimeSignature
                     Data.Rhythm.Event
@@ -32,7 +33,7 @@ Library
                     Data.Rhythm.FeedBack.Show
                     
                     Data.Rhythm.MIDI
-
+                    
                     Data.Rhythm.RockBand.Common
                     
                     Data.Rhythm.RockBand.Lex.File
@@ -43,7 +44,7 @@ Library
                     Data.Rhythm.RockBand.Lex.Vocals
                     Data.Rhythm.RockBand.Lex.ProKeys
                     Data.Rhythm.RockBand.Lex.ProGuitar
-                   
+                    
                     Data.Rhythm.Guitar.Base
 
   hs-source-dirs:   src
