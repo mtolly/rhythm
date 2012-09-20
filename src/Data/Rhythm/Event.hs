@@ -1,5 +1,4 @@
 {- |
-
 The Event container stores events that have two different subtypes, for events
 with duration (\"Long\") and events that are just single points in time
 (\"Point\"). There are two ways you can use the Event type, depending on how it
@@ -11,7 +10,6 @@ is parametrized.
 * A Long event can store a Bool, which says whether it is the beginning
   (True) or end (False) of an event. Standard MIDI files work this way. This is
   called \"switch\" format.
-
 -}
 module Data.Rhythm.Event where
 

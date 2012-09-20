@@ -1,6 +1,7 @@
 Name:               rhythm
 Version:            0.0.1
-Synopsis:           Universal rhythm game types, formats, and conversion.
+Synopsis:           Types and operations on musical event information, such as
+                    the information used by rhythm action video games.
 License:            GPL
 License-file:       LICENSE
 Author:             Michael Tolly
@@ -11,14 +12,9 @@ Category:           Data
 
 Library
   Build-Depends:    base >= 4 && < 5,
-                    array,
-                    bytestring,
-                    pretty >= 1.1 && < 1.2,
                     non-negative >= 0.1 && < 0.2,
                     event-list >= 0.1 && < 0.2,
-                    midi >= 0.2 && < 0.3,
                     transformers >= 0.3 && < 0.4,
-                    binary >= 0.5 && < 0.6,
                     inflist >= 0.0.1 && < 0.1
                     
   Exposed-modules:  Data.Rhythm.Time
@@ -26,30 +22,10 @@ Library
                     Data.Rhythm.Event
                     Data.Rhythm.Interpret
                     Data.Rhythm.Status
-                    
-                    Data.Rhythm.FeedBack
-                    Data.Rhythm.FeedBack.Lex
-                    Data.Rhythm.FeedBack.Parse
-                    Data.Rhythm.FeedBack.Show
-                    
-                    Data.Rhythm.MIDI
-                    
-                    Data.Rhythm.RockBand.Common
-                    
-                    Data.Rhythm.RockBand.Lex.File
-                    Data.Rhythm.RockBand.Lex.Beat
-                    Data.Rhythm.RockBand.Lex.Events
-                    Data.Rhythm.RockBand.Lex.Drums
-                    Data.Rhythm.RockBand.Lex.Basic
-                    Data.Rhythm.RockBand.Lex.Vocals
-                    Data.Rhythm.RockBand.Lex.ProKeys
-                    Data.Rhythm.RockBand.Lex.ProGuitar
-                    
-                    Data.Rhythm.Guitar.Base
 
   hs-source-dirs:   src
   ghc-options:      -Wall
 
 Source-Repository head
   Type:             git
-  Location:         git://github.com/onyxite/rhythm.git
+  Location:         git://github.com/mtolly/rhythm.git

@@ -1,17 +1,5 @@
 {- |
-
-Defines the three basic types for representing musical information:
-beats, ticks, and seconds.
-
-  * Beats are rational distances in terms of musical meter, where a measure in
-    the music is broken up into a certain number of beats.
-
-  * Ticks are an integer value meant to approximate Beats. Many file formats,
-    for practicality, use an integer with a fixed denominator for this purpose.
-
-  * Seconds store each event as fixed at a certain timestamp, a rational value
-    in seconds.
-
+Defines basic types for musical information.
 -}
 module Data.Rhythm.Time where
 
@@ -19,15 +7,15 @@ import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Ratio
+import qualified Data.Rhythm.Status as Status
 
--- | A beat, or quarter note, is the most central timekeeping unit.
+-- | A precise rational number of beats (quarter notes).
 type Beats = NN.Rational
--- | In file formats such as MIDI, beats are encoded as numerators with a fixed
--- denominator (the 'Resolution').
+-- | An approximation of 'Beats': an integer numerator with a fixed denominator.
 type Ticks = NN.Integer
--- | Defines how many ticks are in one beat.
+-- | The denominator of a 'Ticks' value: defines how many ticks are in one beat.
 type Resolution = Ticks
--- | A precise time position/duration in seconds.
+-- | A time position/duration in seconds.
 type Seconds = NN.Rational
 -- | A tempo, in beats per minute.
 type BPM = NN.Rational
@@ -35,16 +23,15 @@ type BPM = NN.Rational
 fromTicks :: Resolution -> Ticks -> Beats
 fromTicks res tks = NN.fromNumberUnsafe $ fromIntegral tks / fromIntegral res
 
--- | Converts a rational duration to integer ticks. If converting multiple
--- consecutive durations, use 'toTickTrack' instead to avoid rounding error.
+-- | If converting multiple consecutive durations, use 'toTickTrack' instead to
+-- avoid rounding error.
 toTicks :: Resolution -> Beats -> Ticks
 toTicks res bts = NN.fromNumberUnsafe $ floor $ bts * fromIntegral res
 
 fromTickTrack :: Resolution -> RTB.T Ticks a -> RTB.T Beats a
 fromTickTrack res = RTB.mapTime (fromTicks res)
 
--- | Rounds each beat duration to an integral value, correcting for rounding
--- errors.
+-- | Corrects for rounding errors along the way.
 toTickTrack :: Resolution -> RTB.T Beats a -> RTB.T Ticks a
 toTickTrack res = RTB.discretize .
   RTB.mapTime (* (NN.fromNumberUnsafe $ fromIntegral res))
@@ -70,3 +57,19 @@ rtbJoin :: (NN.C t, Ord a) => RTB.T t (RTB.T t a) -> RTB.T t a
 rtbJoin rtb = case RTB.viewL rtb of
   Nothing -> RTB.empty
   Just ((dt, x), rtb') -> RTB.delay dt $ RTB.merge x $ rtbJoin rtb'
+
+-- | Uses tempos to convert an event-list from beatstamps to timestamps.
+toTimeTrack :: Status.T Beats BPM -> RTB.T Beats a -> RTB.T Seconds a
+toTimeTrack = Status.applyTime . fmap toTime
+
+-- | Uses tempos to convert an event-list from timestamps to beatstamps.
+fromTimeTrack :: Status.T Seconds BPM -> RTB.T Seconds a -> RTB.T Beats a
+fromTimeTrack = Status.applyTime . fmap fromTime
+
+toTickStatus :: Resolution -> Status.T Beats a -> Status.T Ticks a
+toTickStatus res =
+  uncurry Status.fromRTB . fmap (toTickTrack res) . Status.toRTB
+
+fromTickStatus :: Resolution -> Status.T Ticks a -> Status.T Beats a
+fromTickStatus res =
+  uncurry Status.fromRTB . fmap (fromTickTrack res) . Status.toRTB
