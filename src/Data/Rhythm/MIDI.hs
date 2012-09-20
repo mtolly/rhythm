@@ -16,7 +16,7 @@ import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Numeric.NonNegative.Class as NN
 import Control.Applicative
 import Data.Ratio
--- import Data.Traversable (traverse)
+import Data.Traversable (traverse)
 import qualified Data.Rhythm.Status as Status
 
 data File t a = File
@@ -88,32 +88,61 @@ toTickFile f = File
   , tracks = map (fmap $ toTickTrack res) $ tracks f
   } where res = resolution f
 
-readFile :: F.T -> Maybe (File Ticks Bool)
-readFile = undefined
+getTempo :: T a -> Maybe BPM
+getTempo (Point (E.MetaEvent (M.SetTempo mspqn))) = Just bpm
+  where bpm = 60000 / fromIntegral mspqn
+  -- MIDI tempo is microsecs/quarternote.
+getTempo _ = Nothing
 
--- readFile :: F.T -> Maybe (File Bool)
--- readFile (F.Cons F.Parallel (F.Ticks tmp) trks) =
-  -- Just $ (splitMetaTrack res th) { tracks = map extractName tt } where
-    -- res = fromIntegral tmp
-    -- (th, tt) = case map (fmap readEvent . fromTickTrack res) trks of
-      -- [] -> (RTB.empty, [])
-      -- x : xs -> (x, xs)
--- readFile _ = Nothing
+getSignature :: T a -> Maybe TimeSignature
+getSignature (Point (E.MetaEvent (M.TimeSig n d _ _))) =
+  Just $ TimeSignature (fromIntegral n) $ 2 ^^ (2 - d)
+getSignature _ = Nothing
+
+readFile :: F.T -> Maybe (File Ticks Bool)
+readFile (F.Cons F.Parallel (F.Ticks res) trks) = Just $
+  case map (fmap readEvent) trks of
+    [] -> File (fromIntegral res) (Status.Stay 120) (Status.Stay $ 4 // 4) RTB.empty []
+    meta : rest -> File res' stempo ssig tzero rest' where
+      res' = fromIntegral res
+      (ttempo, meta') = RTB.partitionMaybe getTempo meta
+      (tsig, tzero) = RTB.partitionMaybe getSignature meta'
+      stempo = Status.fromRTB 120 ttempo
+      ssig = validSignatures $ Status.fromRTB (4 // 4) $ fromTickTrack res' tsig
+      rest' = map extractName rest
+readFile _ = Nothing
+
+makeTempo :: BPM -> T a
+makeTempo bpm = Point $ E.MetaEvent $ M.SetTempo $ floor $ 60000 / bpm
+
+makeSignature :: TimeSignature -> Maybe (T a)
+makeSignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
+  \pow -> Just $ Point $ E.MetaEvent $ M.TimeSig (fromIntegral mult) (2 - fromIntegral pow) 24 8
+  where isPowerOf2 :: Rational -> Maybe Integer
+        isPowerOf2 r = case (numerator r, denominator r) of
+          (1, d) -> negate <$> isPowerOf2' d
+          (n, 1) -> isPowerOf2' n
+          _ -> Nothing
+        isPowerOf2' :: Integer -> Maybe Integer
+        isPowerOf2' 1 = Just 0
+        isPowerOf2' n = case quotRem n 2 of
+          (n', 0) -> (+1) <$> isPowerOf2' n'
+          _ -> Nothing
 
 showFile :: File Ticks Bool -> Maybe F.T
-showFile = undefined
-
--- showFile :: File Bool -> Maybe F.T
--- showFile m = let
-  -- res = resolution m
-  -- tempo = fmap (\bpm -> Point $ E.MetaEvent $ M.SetTempo $ floor $ recip bpm * 60000) $ tempoTrack m
+showFile m = let
+  res = resolution m
+  tempo = Status.toRTB' $ Status.cleanRedundant $ makeTempo <$> tempoTrack m :: RTB.T Ticks (T Bool)
+  mbsigs = traverse makeSignature $ toTickTrack res $ Status.toRTB' $
+    Status.cleanRedundant $ renderSignatures $ signatureTrack m :: Maybe (RTB.T Ticks (T Bool))
+  in mbsigs >>= \sigs -> undefined
   -- restTracks = map attachName $ tracks m
   -- attachName (Nothing, trk) = trk
   -- attachName (Just name, trk) = RTB.cons 0 (Point $ E.MetaEvent $ M.TrackName name) trk
   -- maybeSigs = traverse toMIDISignature $ renderSignatures $ signatureTrack m
   -- in maybeSigs >>= \sigs -> return $ let
     -- allMeta = RTB.merge tempo $ RTB.merge (Status.toRTB $ fmap (Point . E.MetaEvent) sigs) $ trackZero m
-    -- allTracks = map (toTickTrack res . fmap showEvent) $ allMeta : restTracks
+    -- allTracks = map (fmap showEvent) $ allMeta : restTracks
     -- in F.Cons F.Parallel (F.Ticks $ fromIntegral res) allTracks
 
 extractName :: (NN.C t) => RTB.T t (T a) -> (Maybe String, RTB.T t (T a))
@@ -125,37 +154,8 @@ extractName rtb = case RTB.viewL rtb of
     | otherwise -> (Nothing, rtb)
   _ -> (Nothing, RTB.empty)
 
--- getTrack :: String -> File a -> Maybe (RTB.T Beats (T a))
--- getTrack str m = lookup (Just str) $ tracks m
+getTrack :: String -> File t a -> Maybe (RTB.T t (T a))
+getTrack str = lookup (Just str) . tracks
 
--- deleteTrack :: String -> File a -> File a
--- deleteTrack str m = m { tracks = filter (\(x, _) -> x /= Just str) $ tracks m }
-
--- splitMetaTrack :: Resolution -> RTB.T Beats (T a) -> File a
--- splitMetaTrack res rtb = File res tempo (validSignatures tsigs) t0 [] where
-  -- (tempo, rtb') = RTB.partitionMaybe getBPM rtb
-  -- (tsigs, t0) = RTB.partitionMaybe getTSig rtb'
-  
-  -- getBPM (Point (E.MetaEvent (M.SetTempo mspqn))) = Just bpm
-    -- where bpm = recip $ fromIntegral mspqn / 60000
-    -- -- MIDI tempo is microsecs/quarternote.
-  -- getBPM _ = Nothing
-  
-  -- getTSig (Point (E.MetaEvent (M.TimeSig n d _ _))) =
-    -- Just $ TimeSignature (fromIntegral n) $ 2 ^^ (2 - d)
-    -- -- "d" is neg. power of 2. so d=2 means 2^-2 = qnote. d=3 means 2^-3 = 8th.
-  -- getTSig _ = Nothing
-
-toMIDISignature :: TimeSignature -> Maybe M.T
-toMIDISignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
-  \pow -> Just $ M.TimeSig (fromIntegral mult) (2 - fromIntegral pow) 24 8
-  where isPowerOf2 :: Rational -> Maybe Integer
-        isPowerOf2 r = case (numerator r, denominator r) of
-          (1, d) -> negate <$> isPowerOf2' d
-          (n, 1) -> isPowerOf2' n
-          _ -> Nothing
-        isPowerOf2' :: Integer -> Maybe Integer
-        isPowerOf2' 1 = Just 0
-        isPowerOf2' n = case quotRem n 2 of
-          (n', 0) -> (+1) <$> isPowerOf2' n'
-          _ -> Nothing
+deleteTrack :: String -> File t a -> File t a
+deleteTrack str m = m { tracks = filter (\(x, _) -> x /= Just str) $ tracks m }
