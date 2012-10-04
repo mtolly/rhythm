@@ -102,7 +102,8 @@ getSignature _ = Nothing
 readFile :: F.T -> Maybe (File Ticks Bool)
 readFile (F.Cons F.Parallel (F.Ticks res) trks) = Just $
   case map (fmap readEvent) trks of
-    [] -> File (fromIntegral res) (Status.Stay 120) (Status.Stay $ 4 // 4) RTB.empty []
+    [] -> File (fromIntegral res) (Status.Stay 120) (Status.Stay $ 4 // 4)
+      RTB.empty []
     meta : rest -> File res' stempo ssig tzero rest' where
       res' = fromIntegral res
       (ttempo, meta') = RTB.partitionMaybe getTempo meta
@@ -117,24 +118,27 @@ makeTempo bpm = Point $ E.MetaEvent $ M.SetTempo $ floor $ 60000 / bpm
 
 makeSignature :: TimeSignature -> Maybe (T a)
 makeSignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
-  \pow -> Just $ Point $ E.MetaEvent $ M.TimeSig (fromIntegral mult) (2 - fromIntegral pow) 24 8
-  where isPowerOf2 :: Rational -> Maybe Integer
-        isPowerOf2 r = case (numerator r, denominator r) of
-          (1, d) -> negate <$> isPowerOf2' d
-          (n, 1) -> isPowerOf2' n
-          _ -> Nothing
-        isPowerOf2' :: Integer -> Maybe Integer
-        isPowerOf2' 1 = Just 0
-        isPowerOf2' n = case quotRem n 2 of
-          (n', 0) -> (+1) <$> isPowerOf2' n'
-          _ -> Nothing
+  \pow -> Just $ Point $ E.MetaEvent $ M.TimeSig (fromIntegral mult)
+    (2 - fromIntegral pow) 24 8 where
+    isPowerOf2 :: Rational -> Maybe Integer
+    isPowerOf2 r = case (numerator r, denominator r) of
+      (1, d) -> negate <$> isPowerOf2' d
+      (n, 1) -> isPowerOf2' n
+      _ -> Nothing
+    isPowerOf2' :: Integer -> Maybe Integer
+    isPowerOf2' 1 = Just 0
+    isPowerOf2' n = case quotRem n 2 of
+      (n', 0) -> (+1) <$> isPowerOf2' n'
+      _ -> Nothing
 
 showFile :: File Ticks Bool -> Maybe F.T
 showFile m = let
   res = resolution m
-  tempo = Status.toRTB' $ Status.cleanRedundant $ makeTempo <$> tempoTrack m :: RTB.T Ticks (T Bool)
+  tempo = Status.toRTB' $ Status.cleanRedundant $ makeTempo <$> tempoTrack m
+    :: RTB.T Ticks (T Bool)
   mbsigs = traverse makeSignature $ toTickTrack res $ Status.toRTB' $
-    Status.cleanRedundant $ renderSignatures $ signatureTrack m :: Maybe (RTB.T Ticks (T Bool))
+    Status.cleanRedundant $ renderSignatures $ signatureTrack m
+    :: Maybe (RTB.T Ticks (T Bool))
   in mbsigs >>= \sigs -> undefined
   -- restTracks = map attachName $ tracks m
   -- attachName (Nothing, trk) = trk
