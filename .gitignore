@@ -1,5 +1,5 @@
-dist/
-report.html
+*/dist/
+*/report.html
 *.lnk
 *.exe
 *.hi
