@@ -1,0 +1,26 @@
+Name:               rhythm-midi
+Version:            0.0.1
+Synopsis:           MIDI module for the rhythm library
+License:            GPL
+License-file:       LICENSE
+Author:             Michael Tolly
+Maintainer:         tolly@wisc.edu
+Build-Type:         Simple
+Cabal-version:      >= 1.8
+Category:           Data
+
+Library
+  Build-Depends:    base >= 4 && < 5,
+                    rhythm == 0.0.1,
+                    non-negative >= 0.1 && < 0.2,
+                    event-list >= 0.1 && < 0.2,
+                    midi
+                    
+  Exposed-modules:  Data.Rhythm.MIDI
+
+  hs-source-dirs:   src
+  ghc-options:      -Wall
+
+Source-Repository head
+  Type:             git
+  Location:         git://github.com/mtolly/rhythm-feedback.git
