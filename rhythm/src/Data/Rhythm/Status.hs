@@ -62,6 +62,9 @@ toRTB (For dt x rest) = (x, uncurry (RTB.cons dt) $ toRTB rest)
 toRTB' :: (NN.C t) => T t a -> RTB.T t a
 toRTB' = uncurry (RTB.cons NN.zero) . toRTB
 
+mapRTB :: (NN.C t) => (RTB.T t a -> RTB.T t' a) -> T t a -> T t' a
+mapRTB f = uncurry fromRTB . fmap f . toRTB
+
 -- | Gets the status at the given time position.
 get :: (NN.C t) => t -> T t a -> a
 get t s = case cleanZero $ drop t s of
