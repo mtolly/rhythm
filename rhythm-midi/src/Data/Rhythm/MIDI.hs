@@ -139,22 +139,19 @@ makeSignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
       _ -> Nothing
 
 showFile :: File Ticks Bool -> Maybe F.T
-showFile m = let
-  res = resolution m
-  tempo = Status.toRTB' $ Status.cleanRedundant $ makeTempo <$> tempoTrack m
+showFile f = let
+  res = resolution f
+  tempo = Status.toRTB' $ Status.cleanRedundant $ makeTempo <$> tempoTrack f
     :: RTB.T Ticks (T Bool)
   mbsigs = traverse makeSignature $ toTickTrack res $ Status.toRTB' $
-    Status.cleanRedundant $ renderSignatures $ signatureTrack m
+    Status.cleanRedundant $ renderSignatures $ signatureTrack f
     :: Maybe (RTB.T Ticks (T Bool))
-  in mbsigs >>= \sigs -> undefined
-  -- restTracks = map attachName $ tracks m
-  -- attachName (Nothing, trk) = trk
-  -- attachName (Just name, trk) = RTB.cons 0 (Point $ E.MetaEvent $ M.TrackName name) trk
-  -- maybeSigs = traverse toMIDISignature $ renderSignatures $ signatureTrack m
-  -- in maybeSigs >>= \sigs -> return $ let
-    -- allMeta = RTB.merge tempo $ RTB.merge (Status.toRTB $ fmap (Point . E.MetaEvent) sigs) $ trackZero m
-    -- allTracks = map (fmap showEvent) $ allMeta : restTracks
-    -- in F.Cons F.Parallel (F.Ticks $ fromIntegral res) allTracks
+  resttrks = map (uncurry attachName) $ tracks f
+    :: [RTB.T Ticks (T Bool)]
+  in mbsigs >>= \sigs -> return $ let
+    trk0 = RTB.merge tempo $ RTB.merge sigs $ trackZero f
+    in F.Cons F.Parallel (F.Ticks $ fromIntegral res) $
+      map (fmap showEvent) $ trk0 : resttrks
 
 extractName :: (NN.C t) => RTB.T t (T a) -> (Maybe String, RTB.T t (T a))
 extractName rtb = case RTB.viewL rtb of
@@ -164,6 +161,10 @@ extractName rtb = case RTB.viewL rtb of
       _ -> fmap (RTB.cons NN.zero evt) $ extractName rest
     | otherwise -> (Nothing, rtb)
   _ -> (Nothing, RTB.empty)
+
+attachName :: (NN.C t) => Maybe String -> RTB.T t (T a) -> RTB.T t (T a)
+attachName = maybe id $ \s ->
+  RTB.cons NN.zero $ Point $ E.MetaEvent $ M.TrackName s
 
 getTrack :: String -> File t a -> Maybe (RTB.T t (T a))
 getTrack str = lookup (Just str) . tracks
