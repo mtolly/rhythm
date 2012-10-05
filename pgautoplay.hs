@@ -93,7 +93,7 @@ data Instrument = Guitar | Bass
 getPG :: (NN.C t) =>
   MPA.GtrController -> Instrument -> MIDI.File t Bool -> RTB.T t (PG.T t)
 getPG c i mid = go $ fromMaybe (error "MIDI track not found") $ case c of
-  MPA.Squier -> MIDI.getTrack name22 mid <|> MIDI.getTrack name17 mid
+  MPA.Squier  -> MIDI.getTrack name22 mid <|> MIDI.getTrack name17 mid
   MPA.Mustang -> MIDI.getTrack name17 mid
   where go t = fst3 $ interpretRTB PG.interpret $ unifyEvents t
         fst3 (x, _, _) = x
@@ -104,7 +104,7 @@ run ::
   MPA.GtrController -> Instrument -> Difficulty -> FilePath -> FilePath -> IO ()
 run c i d fin fout = Load.fromFile fin >>= \f -> case MIDI.readFile f of
   Nothing -> putStrLn "Not a type-1 ticks-based MIDI file"
-  Just m -> let
+  Just m  -> let
     auto = fmap MIDI.readEvent $ pgToMIDI c d $ getPG c i m
     m' = m { MIDI.tracks = [(Just "Autoplay", auto)] }
     in case MIDI.showFile m' of
