@@ -5,7 +5,6 @@ module Main where
 
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
-import Data.Rhythm.Time
 import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.RockBand.Common
 import qualified Data.Rhythm.RockBand.Lex.ProGuitar as PG
@@ -29,7 +28,6 @@ import Data.Maybe
 import Data.Traversable
 import Control.Monad.Trans.State
 import Data.List (nubBy)
-import Data.Ord (comparing)
 import Data.Function (on)
 
 import qualified Data.Map as Map
@@ -38,11 +36,11 @@ import qualified Data.Map as Map
 cleanup :: (NN.C t) => RTB.T t MPA.GtrMessage -> RTB.T t MPA.GtrMessage
 cleanup rtb = evalState (rtbFilterA f rtb) Map.empty where
   f :: MPA.GtrMessage -> State (Map.Map MPA.GtrString MPA.GtrFret) Bool
-  f (MPA.Strum _ _) = return True
-  f (MPA.Fret s f) = do
-    redundant <- gets $ \mp -> Map.lookup s mp == Just f
+  f (MPA.Fret str frt) = do
+    redundant <- gets $ \mp -> Map.lookup str mp == Just frt
     if redundant then return False
-      else modify (Map.insert s f) >> return True
+      else modify (Map.insert str frt) >> return True
+  f _ = return True
 
 rtbFilterA :: (NN.C t, Applicative f) =>
   (a -> f Bool) -> RTB.T t a -> f (RTB.T t a)
@@ -109,8 +107,9 @@ run c i d fin fout = Load.fromFile fin >>= \f -> case MIDI.readFile f of
     m' = m { MIDI.tracks = [(Just "Autoplay", auto)] }
     in case MIDI.showFile m' of
       Nothing -> putStrLn "time signature error"
-      Just f -> Save.toFile fout f
+      Just f' -> Save.toFile fout f'
 
+main :: IO ()
 main = getArgs >>= \argv -> case argv of
   [c, i, d, fin, fout] -> run (read c) (read i) (read d) fin fout
   _ -> mapM_ putStrLn
