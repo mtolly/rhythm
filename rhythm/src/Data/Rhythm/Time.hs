@@ -67,9 +67,7 @@ fromTimeTrack :: Status.T Seconds BPM -> RTB.T Seconds a -> RTB.T Beats a
 fromTimeTrack = Status.applyTime . fmap fromTime
 
 toTickStatus :: Resolution -> Status.T Beats a -> Status.T Ticks a
-toTickStatus res =
-  uncurry Status.fromRTB . fmap (toTickTrack res) . Status.toRTB
+toTickStatus = Status.mapRTB . toTickTrack
 
 fromTickStatus :: Resolution -> Status.T Ticks a -> Status.T Beats a
-fromTickStatus res =
-  uncurry Status.fromRTB . fmap (fromTickTrack res) . Status.toRTB
+fromTickStatus = Status.mapRTB . fromTickTrack
