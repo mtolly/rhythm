@@ -70,6 +70,7 @@ splitFile m = File
   , trackZero = splitEvents $ trackZero m
   , tracks = map (fmap splitEvents) $ tracks m }
 
+-- | Uses the resolution of a file to convert it from ticks to beats.
 fromTickFile :: File Ticks a -> File Beats a
 fromTickFile f = File
   { resolution = res
@@ -79,6 +80,7 @@ fromTickFile f = File
   , tracks = map (fmap $ fromTickTrack res) $ tracks f
   } where res = resolution f
 
+-- | Uses the resolution of a file to convert it from beats to ticks.
 toTickFile :: File Beats a -> File Ticks a
 toTickFile f = File
   { resolution = res
@@ -88,12 +90,14 @@ toTickFile f = File
   , tracks = map (fmap $ toTickTrack res) $ tracks f
   } where res = resolution f
 
+-- | Decodes a tempo from a MIDI event.
 getTempo :: T a -> Maybe BPM
 getTempo (Point (E.MetaEvent (M.SetTempo mspqn))) = Just bpm
   where bpm = 60000 / fromIntegral mspqn
   -- MIDI tempo is microsecs/quarternote.
 getTempo _ = Nothing
 
+-- | Decodes a time signature from a MIDI event.
 getSignature :: T a -> Maybe TimeSignature
 getSignature (Point (E.MetaEvent (M.TimeSig n d _ _))) =
   Just $ TimeSignature (fromIntegral n) $ 2 ^^ (2 - d)
@@ -113,9 +117,12 @@ readFile (F.Cons F.Parallel (F.Ticks res) trks) = Just $
       rest' = map extractName rest
 readFile _ = Nothing
 
+-- | Encodes a tempo as a MIDI event.
 makeTempo :: BPM -> T a
 makeTempo bpm = Point $ E.MetaEvent $ M.SetTempo $ floor $ 60000 / bpm
 
+-- | Encodes a time signature as a MIDI event, or Nothing if the denominator of
+-- the signature isn't a power of 2.
 makeSignature :: TimeSignature -> Maybe (T a)
 makeSignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
   \pow -> Just $ Point $ E.MetaEvent $ M.TimeSig (fromIntegral mult)
