@@ -1,30 +1,19 @@
 -- | A data strcture similar to 'Data.EventList.Relative.TimeBody.T', but which
 -- defines a status which has some value at any point in time.
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Data.Rhythm.Status where
 
 import Prelude hiding (drop)
 import qualified Prelude as P
 import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
-import qualified Data.Foldable as Fold
-import qualified Data.Traversable as Trav
-import Control.Applicative
+import Data.Foldable (Foldable)
+import Data.Traversable (Traversable)
 
 -- | Functionally this is equivalent to 'TimeBody.T' with a guaranteed event at
 -- position zero.
 data T t a = Stay a | For t a (T t a)
-  deriving (Eq, Ord, Show, Read)
-
-instance Functor (T t) where
-  fmap g (Stay x) = Stay $ g x
-  fmap g (For t x rest) = For t (g x) $ fmap g rest
-
-instance Fold.Foldable (T t) where
-  foldMap = Trav.foldMapDefault
-
-instance Trav.Traversable (T t) where
-  traverse g (Stay x) = Stay <$> g x
-  traverse g (For t x rest) = liftA2 (For t) (g x) (Trav.traverse g rest)
+  deriving (Eq, Ord, Show, Read, Functor, Foldable, Traversable)
 
 -- | Removes zero-duration and redundant statuses.
 clean :: (NN.C t, Eq a) => T t a -> T t a
