@@ -20,16 +20,16 @@ import Data.Traversable (traverse)
 import qualified Data.Rhythm.Status as Status
 
 data File t a = File
-  -- | Ticks per beat for storing the MIDI file.
   { resolution :: Resolution
-  -- | The tempo change events from the first MIDI track.
+  -- ^ Ticks per beat for storing the MIDI file.
   , tempoTrack :: Status.T t BPM
-  -- | The time signature events from the first MIDI track.
+  -- ^ The tempo change events from the first MIDI track.
   , signatureTrack :: SignatureTrack
-  -- | Other events (not tempos or time signatures) from the first MIDI track.
+  -- ^ The time signature events from the first MIDI track.
   , trackZero :: RTB.T t (T a)
-  -- | The parallel tracks of the type-1 MIDI file.
+  -- ^ Other events (not tempos or time signatures) from the first MIDI track.
   , tracks :: [(Maybe String, RTB.T t (T a))]
+  -- ^ The parallel tracks of the type-1 MIDI file.
   } deriving (Eq, Ord, Show)
 
 -- | It is an error to make a Point which holds a NoteOn or NoteOff.
