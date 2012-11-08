@@ -43,14 +43,16 @@ fromRTB x rtb = case RTB.viewL rtb of
   Nothing -> Stay x
   Just ((dt, y), rtb') -> For dt x $ fromRTB y rtb'
 
--- | Generates an event-list of changes, with a guaranteed event at position 0.
+-- | Returns the initial event, and an event-list of changes.
 toRTB :: (NN.C t) => T t a -> (a, RTB.T t a)
 toRTB (Stay x) = (x, RTB.empty)
 toRTB (For dt x rest) = (x, uncurry (RTB.cons dt) $ toRTB rest)
 
+-- | Generates an event-list of changes, with a guaranteed event at position 0.
 toRTB' :: (NN.C t) => T t a -> RTB.T t a
 toRTB' = uncurry (RTB.cons NN.zero) . toRTB
 
+-- | Applies a function to the change-list, but not the initial event.
 mapRTB :: (NN.C t) => (RTB.T t a -> RTB.T t' a) -> T t a -> T t' a
 mapRTB f = uncurry fromRTB . fmap f . toRTB
 
