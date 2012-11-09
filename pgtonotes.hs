@@ -25,8 +25,14 @@ import Data.Maybe
 import Data.Traversable
 import Control.Monad.Trans.State
 
-playString :: (NN.C t) =>
-  SixString -> SixTuning V.Pitch -> RTB.T t (PG.T a) -> RTB.T t (MIDI.T a)
-playString str tun = RTB.mapMaybe f where
+playString :: (NN.C t) => Difficulty -> SixString -> SixTuning Int ->
+  RTB.T t (PG.T a) -> RTB.T t (MIDI.T a)
+playString diff str tun = RTB.mapMaybe f where
   f :: PG.T a -> Maybe (MIDI.T a)
-  f = undefined
+  f (Length len (PG.DiffEvent diff' devt)) | diff == diff' = case devt of
+    PG.Note str' frt typ | str == str' -> Just $ Length len $ MIDI.Note ch p vel
+      where ch = toEnum $ fromEnum str
+            p = V.toPitch $ play str frt tun
+            vel = V.toVelocity 96
+    _ -> Nothing
+  f (Point _) = Nothing
