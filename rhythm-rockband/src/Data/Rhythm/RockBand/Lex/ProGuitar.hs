@@ -102,9 +102,9 @@ interpret (Length len (MIDI.Note ch p vel)) = case V.fromPitch p of
       11 -> makeDiff AllFrets
       _ -> makeDiff $ Note nstr nfret ntyp where
         nstr = toEnum k
-        nfret = V.fromVelocity vel - 100
+        nfret = fromIntegral $ V.fromVelocity vel - 100
         ntyp = toEnum $ C.fromChannel ch
-  108 -> single $ Point $ HandPosition $ V.fromVelocity vel - 100
+  108 -> single $ Point $ HandPosition $ fromIntegral $ V.fromVelocity vel - 100
   115 -> single $ Length len Solo
   116 -> single $ Length len Overdrive
   120 -> single $ Length len BRE

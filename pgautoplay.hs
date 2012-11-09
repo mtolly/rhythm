@@ -61,7 +61,7 @@ playEvent evts = fretMsgs ++ strumMsgs where
   
   fretMsg (s, f) = MPA.Fret (toEnum $ fromEnum s) $ MPA.GtrFret f
   fretted = forMaybe evts $ \evt -> case evt of
-    PG.Note s f t | t /= PG.ArpeggioForm -> Just (s, f)
+    PG.Note s f t | t /= PG.ArpeggioForm -> Just (s, fromIntegral f)
     _ -> Nothing
   fretZero = [ (s, 0) | s <- [minBound .. maxBound] ]
   fretMsgs = map fretMsg $ nubBy ((==) `on` fst) $ fretted ++ fretZero

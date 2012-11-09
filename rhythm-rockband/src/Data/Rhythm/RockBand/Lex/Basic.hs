@@ -76,7 +76,7 @@ data StrumMap
 
 interpret :: Interpreter (MIDI.T a) (T a)
 interpret (Length b (MIDI.Note _ p _)) = case V.fromPitch p of
-  i | 40 <= i && i <= 59 -> single $ Length b $ AtFret $ i - 40
+  i | 40 <= i && i <= 59 -> single $ Length b $ AtFret $ fromIntegral $ i - 40
   i | let (oct, k) = quotRem i 12
     , 5 <= oct && oct <= 8
     , 0 <= k && k <= 6
@@ -157,7 +157,7 @@ uninterpret (Length len l) = Length len . standardNote . V.toPitch <$>
     BRE -> [120..124]
     Player1 -> [105]
     Player2 -> [106]
-    AtFret f -> [f + 40]
+    AtFret f -> [fromIntegral f + 40]
     DiffEvent diff evt -> [60 + 12 * fromEnum diff + off] where
       off = case evt of
         Note f -> fromEnum f
