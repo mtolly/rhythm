@@ -1,7 +1,7 @@
 module Main where
 
 -- pro guitar to MIDI notes
--- example app using: rhythm, rhythm-midi, rhythm-rockband
+-- example app using: rhythm, rhythm-midi, rhythm-rockband, midiproadapter
 -- generates 6 tracks of pitches for the 6 strings of a pro guitar track.
 
 import Data.Rhythm.Event
@@ -20,8 +20,8 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Sound.MIDI.File.Load as Load
 import qualified Sound.MIDI.File.Save as Save
 
-import Control.Applicative
-import Data.Maybe
+import Control.Applicative ((<|>))
+import Data.Maybe (fromMaybe)
 import Data.Char (toUpper)
 import System.Environment (getArgs)
 
@@ -30,10 +30,10 @@ playString :: (NN.C t) => Difficulty -> SixString -> SixTuning Int ->
 playString diff str tun = RTB.mapMaybe f where
   f :: PG.T a -> Maybe (MIDI.T a)
   f (Length len (PG.DiffEvent diff' devt)) | diff == diff' = case devt of
-    PG.Note str' frt _ | str == str' -> Just $ Length len $ MIDI.Note ch p v
+    PG.Note str' frt _ | str == str' -> Just $ Length len $ MIDI.Note ch p vel
       where ch = toEnum $ fromEnum str
             p = V.toPitch $ play str frt tun
-            v = V.toVelocity 96
+            vel = V.toVelocity 96
     _ -> Nothing
   f _ = Nothing
 
@@ -58,8 +58,9 @@ getPG c i mid = go $ fromMaybe (error "MIDI track not found") $ case c of
 readTuning :: String -> SixTuning Int
 readTuning "Standard" = stdTuning
 readTuning "DropD" = dropD
--- TODO: other tunings
-readTuning _ = error "readTuning: unrecognized tuning"
+readTuning s = case reads s of
+  [(offsets, _)] -> \str -> stdTuning str + (offsets !! fromEnum str)
+  _ -> error "readTuning: unrecognized tuning"
 
 run :: MPA.GtrController -> Instrument -> Difficulty -> SixTuning Int ->
   FilePath -> FilePath -> IO ()
