@@ -17,15 +17,11 @@ import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Numeric.NonNegative.Class as NN
 
 import qualified Sound.MIDI.Message.Channel.Voice as V
-import qualified Sound.MIDI.File.Event as E
 import qualified Sound.MIDI.File.Load as Load
 import qualified Sound.MIDI.File.Save as Save
 
 import Control.Applicative
-import Control.Monad
 import Data.Maybe
-import Data.Traversable
-import Control.Monad.Trans.State
 import Data.Char (toUpper)
 import System.Environment (getArgs)
 
@@ -34,17 +30,17 @@ playString :: (NN.C t) => Difficulty -> SixString -> SixTuning Int ->
 playString diff str tun = RTB.mapMaybe f where
   f :: PG.T a -> Maybe (MIDI.T a)
   f (Length len (PG.DiffEvent diff' devt)) | diff == diff' = case devt of
-    PG.Note str' frt typ | str == str' -> Just $ Length len $ MIDI.Note ch p v
+    PG.Note str' frt _ | str == str' -> Just $ Length len $ MIDI.Note ch p v
       where ch = toEnum $ fromEnum str
             p = V.toPitch $ play str frt tun
             v = V.toVelocity 96
     _ -> Nothing
-  f (Point _) = Nothing
+  f _ = Nothing
 
 playStrings :: (NN.C t) => Difficulty -> SixTuning Int -> RTB.T t (PG.T a) ->
   [(Maybe String, RTB.T t (MIDI.T a))]
 playStrings diff tun pg = zipWith f [S6 .. S1] [6, 5 .. 1] where
-  f str n = (Just $ "String " ++ show n, playString diff str tun pg)
+  f str n = (Just $ "String " ++ show (n :: Int), playString diff str tun pg)
 
 data Instrument = Guitar | Bass
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
