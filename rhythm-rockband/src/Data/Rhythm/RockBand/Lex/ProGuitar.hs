@@ -33,7 +33,7 @@ data Point
   | HandPosition GtrFret
   | ChordRoot V.Pitch -- ^ Valid pitches are 4 (E) to 15 (D#).
   | ChordName Difficulty String
-  | UnknownPitch18 C.Channel V.Velocity
+  | BlackChordSwitch -- ^ I *think* this swaps between (e.g.) F# and Gb chords.
   deriving (Eq, Ord, Show)
 
 data Length
@@ -78,7 +78,7 @@ interpret (Length len (MIDI.Note ch p vel)) = case V.fromPitch p of
   i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
   16 -> single $ Length len SlashChords
   17 -> single $ Length len NoChordNames
-  18 -> single $ Point $ UnknownPitch18 ch vel
+  18 -> single $ Point BlackChordSwitch
   i | let (oct, k) = quotRem i 12
     , elem oct [2,4,6,8]
     , let makeDiff = single . Length len . DiffEvent (toEnum $ quot oct 2 - 1)
