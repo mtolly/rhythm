@@ -7,6 +7,7 @@ module Main where
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
 import Data.Rhythm.Guitar
+import Data.Rhythm.Time
 import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.RockBand.Common
 import qualified Data.Rhythm.RockBand.Lex.ProGuitar as PG
@@ -25,8 +26,8 @@ import Data.Maybe (fromMaybe)
 import Data.Char (toUpper)
 import System.Environment (getArgs)
 
-playString :: (NN.C t) => Difficulty -> SixString -> SixTuning Int ->
-  RTB.T t (PG.T a) -> RTB.T t (MIDI.T a)
+playString :: (NN.C a) => Difficulty -> SixString -> SixTuning Int ->
+  RTB.T Seconds (PG.T a) -> RTB.T Seconds (MIDI.T a)
 playString diff str tun = RTB.mapMaybe f where
   f :: PG.T a -> Maybe (MIDI.T a)
   f (Length len (PG.DiffEvent diff' devt)) | diff == diff' = case devt of
@@ -37,8 +38,8 @@ playString diff str tun = RTB.mapMaybe f where
     _ -> Nothing
   f _ = Nothing
 
-playStrings :: (NN.C t) => Difficulty -> SixTuning Int -> RTB.T t (PG.T a) ->
-  [(Maybe String, RTB.T t (MIDI.T a))]
+playStrings :: (NN.C a) => Difficulty -> SixTuning Int ->
+  RTB.T Seconds (PG.T a) -> [(Maybe String, RTB.T Seconds (MIDI.T a))]
 playStrings diff tun pg = zipWith f [S6 .. S1] [6, 5 .. 1] where
   f str n = (Just $ "String " ++ show (n :: Int), playString diff str tun pg)
 
@@ -67,9 +68,10 @@ run :: MPA.GtrController -> Instrument -> Difficulty -> SixTuning Int ->
 run c i d tun fin fout = Load.fromFile fin >>= \f -> case MIDI.readFile f of
   Nothing -> putStrLn "Not a type-1 ticks-based MIDI file"
   Just m  -> let
-    unified = MIDI.unifyFile m
-    trks = playStrings d tun $ getPG c i unified
-    m' = MIDI.splitFile $ unified { MIDI.tracks = trks }
+    unifiedTime = MIDI.unifyFile $ MIDI.toTimeFile $ MIDI.fromTickFile m
+    trks = playStrings d tun $ getPG c i unifiedTime
+    m' = MIDI.toTickFile $ MIDI.fromTimeFile $ MIDI.splitFile $
+      unifiedTime { MIDI.tracks = trks }
     in case MIDI.showFile m' of
       Nothing -> putStrLn "time signature error"
       Just f' -> Save.toFile fout f'

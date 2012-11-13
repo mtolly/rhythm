@@ -113,7 +113,7 @@ toTickFile f = File
 -- | Decodes a tempo from a MIDI event.
 getTempo :: T a -> Maybe BPM
 getTempo (Point (E.MetaEvent (M.SetTempo mspqn))) = Just bpm
-  where bpm = 60000 / fromIntegral mspqn
+  where bpm = 60000000 / fromIntegral mspqn
   -- MIDI tempo is microsecs/quarternote.
 getTempo _ = Nothing
 
@@ -139,7 +139,7 @@ readFile _ = Nothing
 
 -- | Encodes a tempo as a MIDI event.
 makeTempo :: BPM -> T a
-makeTempo bpm = Point $ E.MetaEvent $ M.SetTempo $ floor $ 60000 / bpm
+makeTempo bpm = Point $ E.MetaEvent $ M.SetTempo $ floor $ 60000000 / bpm
 
 -- | Encodes a time signature as a MIDI event, or Nothing if the denominator of
 -- the signature isn't a power of 2.
@@ -161,7 +161,7 @@ makeSignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
 showFile :: File Ticks Bool -> Maybe F.T
 showFile f = let
   res = resolution f
-  tempo = Status.toRTB' $ Status.cleanRedundant $ makeTempo <$> tempoTrack f
+  tempo = Status.toRTB' $ Status.clean $ makeTempo <$> tempoTrack f
     :: RTB.T Ticks (T Bool)
   mbsigs = traverse makeSignature $ toTickTrack res $ Status.toRTB' $
     Status.cleanRedundant $ renderSignatures $ signatureTrack f
