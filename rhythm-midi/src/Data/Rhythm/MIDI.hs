@@ -70,6 +70,26 @@ splitFile m = File
   , trackZero = splitEvents $ trackZero m
   , tracks = map (fmap splitEvents) $ tracks m }
 
+toTimeFile :: File Beats a -> File Seconds a
+toTimeFile m = File
+  { resolution = resolution m
+  , tempoTrack = Status.mapRTB toTimeTrack' tt
+  , signatureTrack = signatureTrack m
+  , trackZero = toTimeTrack' $ trackZero m
+  , tracks = map (fmap toTimeTrack') $ tracks m }
+  where tt = tempoTrack m
+        toTimeTrack' = toTimeTrack tt
+
+fromTimeFile :: File Seconds a -> File Beats a
+fromTimeFile m = File
+  { resolution = resolution m
+  , tempoTrack = Status.mapRTB fromTimeTrack' tt
+  , signatureTrack = signatureTrack m
+  , trackZero = fromTimeTrack' $ trackZero m
+  , tracks = map (fmap fromTimeTrack') $ tracks m }
+  where tt = tempoTrack m
+        fromTimeTrack' = fromTimeTrack tt
+
 -- | Uses the resolution of a file to convert it from ticks to beats.
 fromTickFile :: File Ticks a -> File Beats a
 fromTickFile f = File
