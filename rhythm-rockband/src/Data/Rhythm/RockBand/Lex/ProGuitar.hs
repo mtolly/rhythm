@@ -9,6 +9,7 @@ import qualified Sound.MIDI.File.Event.Meta as M
 import qualified Sound.MIDI.Message.Channel as C
 import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.MIDI as MIDI
+import Data.Rhythm.Time
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
 import qualified Numeric.NonNegative.Class as NN
@@ -33,7 +34,6 @@ data Point
   | HandPosition GtrFret
   | ChordRoot V.Pitch -- ^ Valid pitches are 4 (E) to 15 (D#).
   | ChordName Difficulty String
-  | BlackChordSwitch -- ^ I *think* this swaps between (e.g.) F# and Gb chords.
   deriving (Eq, Ord, Show)
 
 data Length
@@ -44,6 +44,7 @@ data Length
   | Solo
   | NoChordNames
   | SlashChords
+  | BlackChordSwitch -- ^ I *think* this swaps between (e.g.) F# and Gb chords.
   | DiffEvent Difficulty DiffEvent
   deriving (Eq, Ord, Show)
 
@@ -70,7 +71,7 @@ data NoteType
 data SlideType = NormalSlide | ReversedSlide
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-data StrumArea = Low | Mid | High
+data StrumArea = High | Mid | Low
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 interpret :: (NN.C t) => Interpreter (MIDI.T t) (T t)
@@ -78,7 +79,7 @@ interpret (Length len (MIDI.Note ch p vel)) = case V.fromPitch p of
   i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
   16 -> single $ Length len SlashChords
   17 -> single $ Length len NoChordNames
-  18 -> single $ Point BlackChordSwitch
+  18 -> single $ Length len BlackChordSwitch
   i | let (oct, k) = quotRem i 12
     , elem oct [2,4,6,8]
     , let makeDiff = single . Length len . DiffEvent (toEnum $ quot oct 2 - 1)
@@ -123,6 +124,45 @@ interpret (Point (E.MetaEvent (M.TextEvent str))) = case readTrainer str of
     Nothing -> none
     Just (diff, name) -> single $ Point $ ChordName diff name
 interpret _ = none
+
+uninterpret :: Uninterpreter (T Beats) (MIDI.T Beats)
+uninterpret (Point x) = case x of
+  TrainerGtr t -> [text $ showTrainer t "pg"]
+  TrainerBass t -> [text $ showTrainer t "pb"]
+  HandPosition f -> [blip $ V.toPitch $ fromIntegral f + 100]
+  ChordRoot p -> [blip p]
+  ChordName diff str -> [text $ showChordName diff str]
+  where text = Point . E.MetaEvent . M.TextEvent
+uninterpret (Length len x) = case x of
+  SlashChords -> [note 16]
+  NoChordNames -> [note 17]
+  BlackChordSwitch -> [note 18]
+  Solo -> [note 115]
+  Overdrive -> [note 116]
+  BRE -> map note [120 .. 125]
+  Tremolo -> [note 126]
+  Trill -> [note 127]
+  DiffEvent diff evt -> [Length len $ MIDI.Note ch p vel] where
+    ch = case evt of
+      Note _ _ typ -> toEnum $ fromEnum typ
+      Slide typ -> toEnum $ fromEnum typ * 11
+      PartialChord area -> toEnum $ fromEnum area + 13
+      UnknownBFlat c _ -> c
+      _ -> toEnum 0
+    p = V.toPitch $ diffOffset + case evt of
+      Note str _ _ -> fromEnum str
+      ForceHOPO -> 6
+      Slide _ -> 7
+      Arpeggio -> 8
+      PartialChord _ -> 9
+      UnknownBFlat _ _ -> 10
+      AllFrets -> 11
+    vel = case evt of
+      Note _ frt _ -> V.toVelocity $ fromIntegral frt + 100
+      UnknownBFlat _ v -> v
+      _ -> V.toVelocity 96
+    diffOffset = (fromEnum diff + 1) * 24
+  where note = Length len . standardNote . V.toPitch
 
 readChordName :: String -> Maybe (Difficulty, String)
 readChordName str
