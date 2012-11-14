@@ -17,6 +17,8 @@ import qualified Data.RockBand.MIDIProAdapter as MPA
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Numeric.NonNegative.Class as NN
 
+import qualified Sound.MIDI.File.Event as E
+import qualified Sound.MIDI.Message.Channel as C
 import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Sound.MIDI.File.Load as Load
 import qualified Sound.MIDI.File.Save as Save
@@ -25,21 +27,42 @@ import Control.Applicative ((<|>))
 import Data.Maybe (fromMaybe)
 import Data.Char (toUpper)
 import System.Environment (getArgs)
+import Control.Monad.Fix (fix)
 
-playString :: (NN.C a) => Difficulty -> SixString -> SixTuning Int ->
-  RTB.T Seconds (PG.T a) -> RTB.T Seconds (MIDI.T a)
-playString diff str tun = RTB.mapMaybe f where
-  f :: PG.T a -> Maybe (MIDI.T a)
+playString :: Difficulty -> SixString -> SixTuning Int ->
+  RTB.T Seconds (PG.T Seconds) -> RTB.T Seconds (MIDI.T Seconds)
+playString diff str tun = rtbJoin . fmap f where
+  f :: PG.T Seconds -> RTB.T Seconds (MIDI.T Seconds)
   f (Length len (PG.DiffEvent diff' devt)) | diff == diff' = case devt of
-    PG.Note str' frt _ | str == str' -> Just $ Length len $ MIDI.Note ch p vel
+    PG.Note str' frt typ | str == str' -> case typ of
+      PG.ArpeggioForm -> RTB.empty
+      PG.Bent -> RTB.merge note $ rtbTake len $ bender (1 / 4) ch
+      _ -> RTB.cons 0 (resetPB ch) note
       where ch = toEnum $ fromEnum str
             p = V.toPitch $ play str frt tun
             vel = V.toVelocity 96
-    _ -> Nothing
-  f _ = Nothing
+            note = RTB.singleton 0 $ Length len $ MIDI.Note ch p vel
+    _ -> RTB.empty
+  f _ = RTB.empty
 
-playStrings :: (NN.C a) => Difficulty -> SixTuning Int ->
-  RTB.T Seconds (PG.T a) -> [(Maybe String, RTB.T Seconds (MIDI.T a))]
+-- | An infinite event-list of pitch bend events, oscillating between no bend
+-- and maximum bend up. The argument is the period (time of a full cycle).
+bender :: (Ord a) => Seconds -> C.Channel -> RTB.T Seconds (MIDI.T a)
+bender secs ch = RTB.merge (RTB.singleton 0 $ resetPB ch) $ fix attachRTB where
+  attachRTB = foldr (.) id $ map (RTB.cons eventGap) bendEvents
+  eventGap = secs / fromIntegral (length bendEvents)
+  bendEvents = map
+    (Point . E.MIDIEvent . C.Cons ch . C.Voice . V.PitchBend . floor)
+    bendValues
+  bendValues = map (\n -> fromIntegral n * 8191 / 20 + 8192)
+    ([0 .. 20] ++ [19, 18 .. 1] :: [Int])
+    :: [Rational]
+
+resetPB :: C.Channel -> MIDI.T a
+resetPB ch = Point $ E.MIDIEvent $ C.Cons ch $ C.Voice $ V.PitchBend 8192
+
+playStrings :: Difficulty -> SixTuning Int -> RTB.T Seconds (PG.T Seconds) ->
+  [(Maybe String, RTB.T Seconds (MIDI.T Seconds))]
 playStrings diff tun pg = zipWith f [S6 .. S1] [6, 5 .. 1] where
   f str n = (Just $ "String " ++ show (n :: Int), playString diff str tun pg)
 
@@ -69,6 +92,7 @@ run c i d tun fin fout = Load.fromFile fin >>= \f -> case MIDI.readFile f of
   Nothing -> putStrLn "Not a type-1 ticks-based MIDI file"
   Just m  -> let
     unifiedTime = MIDI.unifyFile $ MIDI.toTimeFile $ MIDI.fromTickFile m
+      :: MIDI.File Seconds Seconds
     trks = playStrings d tun $ getPG c i unifiedTime
     m' = MIDI.toTickFile $ MIDI.fromTimeFile $ MIDI.splitFile $
       unifiedTime { MIDI.tracks = trks }
