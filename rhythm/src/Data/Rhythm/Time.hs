@@ -1,6 +1,7 @@
 {- |
 Defines basic types for musical information.
 -}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.Rhythm.Time where
 
 import qualified Numeric.NonNegative.Wrapper as NN
@@ -8,47 +9,54 @@ import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Ratio
 import qualified Data.Rhythm.Status as Status
+import Data.Monoid (Monoid)
 
 -- | A precise rational number of beats (quarter notes).
-type Beats = NN.Rational
+newtype Beats = Beats { unBeats :: NN.Rational }
+  deriving (Eq, Ord, Show, Num, Real, Fractional, RealFrac, NN.C, Monoid)
 -- | An approximation of 'Beats': an integer numerator with a fixed denominator.
-type Ticks = NN.Integer
+newtype Ticks = Ticks { unTicks :: NN.Integer }
+  deriving (Eq, Ord, Show, Enum, Num, Real, Integral, NN.C, Monoid)
 -- | The denominator of a 'Ticks' value: defines how many ticks are in one beat.
 type Resolution = Ticks
 -- | A time position/duration in seconds.
-type Seconds = NN.Rational
+newtype Seconds = Seconds { unSeconds :: NN.Rational }
+  deriving (Eq, Ord, Show, Num, Real, Fractional, RealFrac, NN.C, Monoid)
 -- | A tempo, in beats per minute.
-type BPM = NN.Rational
+type BPM = Beats
 
 fromTicks :: Resolution -> Ticks -> Beats
-fromTicks res tks = NN.fromNumberUnsafe $ fromIntegral tks / fromIntegral res
+fromTicks (Ticks res) (Ticks tks) =
+  Beats $ NN.fromNumberUnsafe $ fromIntegral tks / fromIntegral res
 
 -- | If converting multiple consecutive durations, use 'toTickTrack' instead to
 -- avoid rounding error.
 toTicks :: Resolution -> Beats -> Ticks
-toTicks res bts = NN.fromNumberUnsafe $ floor $ bts * fromIntegral res
+toTicks (Ticks res) (Beats bts) =
+  Ticks $ NN.fromNumberUnsafe $ floor $ bts * fromIntegral res
 
 fromTickTrack :: Resolution -> RTB.T Ticks a -> RTB.T Beats a
 fromTickTrack res = RTB.mapTime (fromTicks res)
 
 -- | Corrects for rounding errors along the way.
 toTickTrack :: Resolution -> RTB.T Beats a -> RTB.T Ticks a
-toTickTrack res = RTB.discretize .
-  RTB.mapTime (* (NN.fromNumberUnsafe $ fromIntegral res))
+toTickTrack (Ticks res) = RTB.discretize . RTB.mapTime f where
+  f (Beats bts) = bts * NN.fromNumberUnsafe (fromIntegral res)
 
 -- | The smallest resolution needed to represent all times correctly.
 minResolution :: [Beats] -> Resolution
-minResolution = NN.fromNumberUnsafe . foldr (lcm . denominator . NN.toNumber) 1
+minResolution = Ticks . NN.fromNumberUnsafe .
+  foldr (lcm . denominator . NN.toNumber . unBeats) 1
 
 -- | The smallest resolution needed to represent all event positions correctly.
 minTrackResolution :: RTB.T Beats a -> Resolution
 minTrackResolution = minResolution . RTB.getTimes
 
 toTime :: BPM -> Beats -> Seconds
-toTime bpm bts = (bts / bpm) * 60
+toTime (Beats bpm) (Beats bts) = Seconds $ (bts / bpm) * 60
 
 fromTime :: BPM -> Seconds -> Beats
-fromTime bpm secs = (secs / 60) * bpm
+fromTime (Beats bpm) (Seconds secs) = Beats $ (secs / 60) * bpm
 
 -- | Each event-list is merged into a new list, starting at its position in the
 -- original list. This is equivalent to the monad function join, but the Monad

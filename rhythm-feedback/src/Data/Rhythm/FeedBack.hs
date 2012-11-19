@@ -11,11 +11,10 @@ import Data.Rhythm.Time
 import Data.Rhythm.Event
 import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
-import Control.Monad ((>=>))
 
 data Value
   = Int NN.Integer -- ^ Non-negative integer literals, like 0, 8, or 123
-  | Real Rational -- ^ Floating point literals, like 0.0, 5.42, or -6789.1234
+  | Real Rational -- ^ Decimal literals, like 0.0, 5.42, or -6789.1234
   | Quoted String -- ^ Quoted strings, like \"hello,\\nworld!\" or \"My Song\"
   | Ident String -- ^ Raw identifiers, like TS, rhythm, or Song
   deriving (Eq, Ord, Show)
@@ -68,10 +67,10 @@ setValue str val f = f { songData = new } where
   new = (str, val) : [p | p@(x, _) <- songData f, x /= str]
 
 getResolution :: File a -> Maybe Resolution
-getResolution = getValue "Resolution" >=> fromInt
+getResolution f = fmap Ticks $ getValue "Resolution" f >>= fromInt
 
 setResolution :: Resolution -> File a -> File a
-setResolution = setValue "Resolution" . Int
+setResolution = setValue "Resolution" . Int . unTicks
 
 mapTracks :: (RTB.T a (T a) -> RTB.T b (T b)) -> File a -> File b
 mapTracks g f = File

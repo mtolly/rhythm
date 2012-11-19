@@ -35,13 +35,13 @@ showSongChunk chunk = startChunk "Song" . compose (map f chunk) . endChunk where
 showEventChunk :: String -> Chunk Ticks -> ShowS
 showEventChunk name chunk = startChunk name . middle . endChunk where
   middle = compose $ map f $ ATB.toPairList $ RTB.toAbsoluteEventList 0 chunk
-  f (tks, evt) = showLine (Int tks) $ case evt of
-    Length len d -> case d of
+  f (Ticks tks, evt) = showLine (Int tks) $ case evt of
+    Length (Ticks len) d -> case d of
       Note fret -> [Ident "N", Int fret, Int len]
       Stream strType -> [Ident "S", Int strType, Int len]
     Point p -> case p of
-      BPM bpm -> [Ident "B", Int $ floor $ bpm * 1000]
-      Anchor secs -> [Ident "A", Int $ floor $ secs * 1000000]
+      BPM (Beats bpm) -> [Ident "B", Int $ floor $ bpm * 1000]
+      Anchor (Seconds secs) -> [Ident "A", Int $ floor $ secs * 1000000]
       TimeSig i -> [Ident "TS", Int i]
       EventGlobal str -> [Ident "E", Quoted str]
       EventLocal str -> [Ident "E", Ident str]

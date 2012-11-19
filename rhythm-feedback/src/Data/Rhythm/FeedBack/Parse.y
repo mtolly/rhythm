@@ -51,10 +51,10 @@ SongLines : ident '=' Value SongLines { ($1, $3) : $4 }
 EventLines : EventLine EventLines { $1 : $2 }
            | { [] }
 
-EventLine : int '=' Event { ($1, $3) }
+EventLine : int '=' Event { (Ticks $1, $3) }
 
-Event : b int { Point $ BPM $ fromIntegral $2 / 1000 }
-      | a int { Point $ Anchor $ fromIntegral $2 / 1000000 }
+Event : b int { Point $ BPM $ Beats $ fromIntegral $2 / 1000 }
+      | a int { Point $ Anchor $ Seconds $ fromIntegral $2 / 1000000 }
       | ts int { Point $ TimeSig $2 }
       | e quoted { Point $ EventGlobal $2 }
       | e ident { Point $ EventLocal $2 }

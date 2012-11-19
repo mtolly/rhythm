@@ -125,7 +125,7 @@ getSignature _ = Nothing
 
 readFile :: F.T -> Maybe (File Ticks Bool)
 readFile (F.Cons F.Parallel (F.Ticks res) trks) = Just $
-  case map (fmap readEvent) trks of
+  case map (fmap readEvent . RTB.mapTime Ticks) trks of
     [] -> File (fromIntegral res) (Status.Stay 120) (Status.Stay $ 4 // 4)
       RTB.empty []
     meta : rest -> File res' stempo ssig tzero rest' where
@@ -144,7 +144,7 @@ makeTempo bpm = Point $ E.MetaEvent $ M.SetTempo $ floor $ 60000000 / bpm
 -- | Encodes a time signature as a MIDI event, or Nothing if the denominator of
 -- the signature isn't a power of 2.
 makeSignature :: TimeSignature -> Maybe (T a)
-makeSignature (TimeSignature mult unit) = isPowerOf2 (NN.toNumber unit) >>=
+makeSignature (TimeSignature mult (Beats unit)) = isPowerOf2 (NN.toNumber unit) >>=
   \pow -> Just $ Point $ E.MetaEvent $ M.TimeSig (fromIntegral mult)
     (2 - fromIntegral pow) 24 8 where
     isPowerOf2 :: Rational -> Maybe Integer
@@ -171,7 +171,7 @@ showFile f = let
   in mbsigs >>= \sigs -> return $ let
     trk0 = RTB.merge tempo $ RTB.merge sigs $ trackZero f
     in F.Cons F.Parallel (F.Ticks $ fromIntegral res) $
-      map (fmap showEvent) $ trk0 : resttrks
+      map (fmap showEvent . RTB.mapTime unTicks) $ trk0 : resttrks
 
 extractName :: (NN.C t) => RTB.T t (T a) -> (Maybe String, RTB.T t (T a))
 extractName rtb = case RTB.viewL rtb of
