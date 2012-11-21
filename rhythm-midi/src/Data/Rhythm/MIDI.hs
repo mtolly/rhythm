@@ -54,6 +54,7 @@ showEvent (Length b (Note ch p v)) =
   E.MIDIEvent $ C.Cons ch $ C.Voice $ (if b then V.NoteOn else V.NoteOff) p v
 showEvent (Point evt) = evt
 
+-- | Modifies a file by applying functions to the tempo map and each track.
 mapTracks :: (Status.T t BPM -> Status.T u BPM) ->
   (RTB.T t (T a) -> RTB.T u (T b)) -> File t a -> File u b
 mapTracks fbpm frtb m = File

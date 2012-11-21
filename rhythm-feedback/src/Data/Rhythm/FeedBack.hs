@@ -9,7 +9,9 @@ module Data.Rhythm.FeedBack where
 
 import Data.Rhythm.Time
 import Data.Rhythm.Event
+import qualified Data.Rhythm.Status as Status
 import qualified Numeric.NonNegative.Wrapper as NN
+import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 
 data Value
@@ -71,8 +73,35 @@ getResolution f = fmap Ticks $ getValue "Resolution" f >>= fromInt
 setResolution :: Resolution -> File t a -> File t a
 setResolution = setValue "Resolution" . Int . unTicks
 
+getTempoTrack :: (NN.C t) => File t a -> Status.T t BPM
+getTempoTrack = Status.fromRTB 120 . RTB.mapMaybe g . syncTrack where
+  g (Point (BPM b)) = Just b
+  g _               = Nothing
+
 mapTracks :: (RTB.T t (T a) -> RTB.T u (T b)) -> File t a -> File u b
 mapTracks g f = File
   { songData = songData f
   , syncTrack = g $ syncTrack f
   , chunks = map (fmap g) $ chunks f }
+
+unifyFile :: (NN.C t) => File t Bool -> File t t
+unifyFile = mapTracks unifyEvents
+
+splitFile :: (NN.C t) => File t t -> File t Bool
+splitFile = mapTracks splitEvents
+
+-- | Uses the file's tempo track to convert.
+toTimeFile :: File Beats a -> File Seconds a
+toTimeFile f = mapTracks (toTimeTrack $ getTempoTrack f) f
+
+-- | Uses the file's tempo track to convert.
+fromTimeFile :: File Seconds a -> File Beats a
+fromTimeFile f = mapTracks (fromTimeTrack $ getTempoTrack f) f
+
+-- | Uses the file's resolution to convert, or returns Nothing if no resolution.
+fromTickFile :: File Ticks a -> Maybe (File Beats a)
+fromTickFile f = getResolution f >>= \r -> Just $ mapTracks (fromTickTrack r) f
+
+-- | Uses the file's resolution to convert, or returns Nothing if no resolution.
+toTickFile :: File Beats a -> Maybe (File Ticks a)
+toTickFile f = getResolution f >>= \r -> Just $ mapTracks (toTickTrack r) f
