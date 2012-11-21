@@ -1,10 +1,8 @@
 {- |
-Datatype definitions for the FeedBack .chart file format. This ad hoc format was
-created by TurkeyMan for use with FeedBack, his custom Guitar Hero charting
-program. Instead of note on/off events like in MIDI, each note is stored with a
-duration value. The .chart file also stores various metadata about the song.
+Type definitions for the FeedBack .chart file format. This ad hoc format was
+created by TurkeyMan for use with FeedBack, a Guitar Hero customs charting
+program.
 -}
-{-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Rhythm.FeedBack where
 
 import Data.Rhythm.Time
@@ -22,11 +20,10 @@ data Value
   deriving (Eq, Ord, Show)
 
 data File t a = File
-  { songData :: SongData
+  { songData :: [(String, Value)]
   , syncTrack :: RTB.T t (T a)
   , chunks :: [(String, RTB.T t (T a))] }
   deriving (Eq, Ord, Show)
-type SongData = [(String, Value)]
 
 data Length
   = Note NN.Integer

@@ -28,7 +28,7 @@ showLine lhs rhs onto = concat
 endChunk :: ShowS
 endChunk onto = "}\n" ++ onto
 
-showSongChunk :: SongData -> ShowS
+showSongChunk :: [(String, Value)] -> ShowS
 showSongChunk chunk = startChunk "Song" . compose (map f chunk) . endChunk where
   f (str, val) = showLine (Ident str) [val]
 
