@@ -6,10 +6,10 @@ import qualified Data.EventList.Absolute.TimeBody as ATB
 import Data.Rhythm.Time
 import Data.Rhythm.Event
 
-toFile :: FilePath -> File Ticks -> IO ()
+toFile :: FilePath -> File Ticks Ticks -> IO ()
 toFile fp db = writeFile fp $ showFile db ""
 
-showFile :: File Ticks -> ShowS
+showFile :: File Ticks Ticks -> ShowS
 showFile (File son syn chs)
   = showSongChunk son
   . showEventChunk "SyncTrack" syn
@@ -32,7 +32,7 @@ showSongChunk :: SongData -> ShowS
 showSongChunk chunk = startChunk "Song" . compose (map f chunk) . endChunk where
   f (str, val) = showLine (Ident str) [val]
 
-showEventChunk :: String -> Chunk Ticks -> ShowS
+showEventChunk :: String -> RTB.T Ticks (T Ticks) -> ShowS
 showEventChunk name chunk = startChunk name . middle . endChunk where
   middle = compose $ map f $ ATB.toPairList $ RTB.toAbsoluteEventList 0 chunk
   f (Ticks tks, evt) = showLine (Int tks) $ case evt of

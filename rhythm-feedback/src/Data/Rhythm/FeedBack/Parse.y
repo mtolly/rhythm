@@ -68,7 +68,7 @@ Value : int { Int $1 }
 
 {
 
-fromFile :: FilePath -> IO (File Ticks)
+fromFile :: FilePath -> IO (File Ticks Ticks)
 fromFile fp = fmap (parse . scan) $ readFile fp
 
 -- | If instead of this error, "Internal Happy error" is sometimes printed, make
@@ -78,7 +78,7 @@ parseError [] = error "Parse error at EOF"
 parseError ((AlexPn _ ln col, tok) : _) = error $
   "Parse error at " ++ show ln ++ ":" ++ show col ++ ", token " ++ show tok
 
-toChunk :: [(Ticks, T Ticks)] -> Chunk Ticks
+toChunk :: [(Ticks, T Ticks)] -> RTB.T Ticks (T Ticks)
 toChunk = RTB.fromAbsoluteEventList . ATB.fromPairList
 
 }

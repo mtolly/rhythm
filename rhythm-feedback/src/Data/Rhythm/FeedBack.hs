@@ -19,12 +19,11 @@ data Value
   | Ident String -- ^ Raw identifiers, like TS, rhythm, or Song
   deriving (Eq, Ord, Show)
 
-data File a = File
+data File t a = File
   { songData :: SongData
-  , syncTrack :: Chunk a
-  , chunks :: [(String, Chunk a)] }
+  , syncTrack :: RTB.T t (T a)
+  , chunks :: [(String, RTB.T t (T a))] }
   deriving (Eq, Ord, Show)
-type Chunk a = RTB.T a (T a)
 type SongData = [(String, Value)]
 
 data Length
@@ -59,20 +58,20 @@ fromIdent :: Value -> Maybe String
 fromIdent (Ident s) = Just s
 fromIdent _ = Nothing
 
-getValue :: String -> File a -> Maybe Value
+getValue :: String -> File t a -> Maybe Value
 getValue str = lookup str . songData
 
-setValue :: String -> Value -> File a -> File a
+setValue :: String -> Value -> File t a -> File t a
 setValue str val f = f { songData = new } where
   new = (str, val) : [p | p@(x, _) <- songData f, x /= str]
 
-getResolution :: File a -> Maybe Resolution
+getResolution :: File t a -> Maybe Resolution
 getResolution f = fmap Ticks $ getValue "Resolution" f >>= fromInt
 
-setResolution :: Resolution -> File a -> File a
+setResolution :: Resolution -> File t a -> File t a
 setResolution = setValue "Resolution" . Int . unTicks
 
-mapTracks :: (RTB.T a (T a) -> RTB.T b (T b)) -> File a -> File b
+mapTracks :: (RTB.T t (T a) -> RTB.T u (T b)) -> File t a -> File u b
 mapTracks g f = File
   { songData = songData f
   , syncTrack = g $ syncTrack f
