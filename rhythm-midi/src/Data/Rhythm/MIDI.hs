@@ -16,20 +16,15 @@ import qualified Numeric.NonNegative.Wrapper as NN
 import qualified Numeric.NonNegative.Class as NN
 import Control.Applicative
 import Data.Ratio
-import Data.Traversable (traverse)
 import qualified Data.Rhythm.Status as Status
 
 data File t a = File
   { resolution :: Resolution
   -- ^ Ticks per beat for storing the MIDI file.
-  , tempoTrack :: Status.T t BPM
-  -- ^ The tempo change events from the first MIDI track.
-  , signatureTrack :: SignatureTrack
-  -- ^ The time signature events from the first MIDI track.
   , trackZero :: RTB.T t (T a)
-  -- ^ Other events (not tempos or time signatures) from the first MIDI track.
+  -- ^ The first MIDI track, which holds tempo and time signature changes.
   , tracks :: [(Maybe String, RTB.T t (T a))]
-  -- ^ The parallel tracks of the type-1 MIDI file.
+  -- ^ The parallel tracks in a type-1 MIDI file, along with track names.
   } deriving (Eq, Ord, Show)
 
 -- | It is an error to make a Point which holds a NoteOn or NoteOff.
@@ -41,6 +36,13 @@ data Note = Note C.Channel V.Pitch V.Velocity
 
 instance Long Note where
   match (Note c0 p0 _) (Note c1 p1 _) = c0 == c1 && p0 == p1
+
+tempoTrack :: (NN.C t) => File t a -> Status.T t BPM
+tempoTrack = Status.fromRTB (Beats 120) . RTB.mapMaybe getTempo . trackZero
+
+signatureTrack :: File Beats a -> SignatureTrack
+signatureTrack = validSignatures . Status.fromRTB (4 // 4) .
+  RTB.mapMaybe getSignature . trackZero
 
 readEvent :: E.T -> T Bool
 readEvent (E.MIDIEvent (C.Cons ch (C.Voice (V.NoteOff p v)))) =
@@ -54,42 +56,35 @@ showEvent (Length b (Note ch p v)) =
   E.MIDIEvent $ C.Cons ch $ C.Voice $ (if b then V.NoteOn else V.NoteOff) p v
 showEvent (Point evt) = evt
 
--- | Modifies a file by applying functions to the tempo map and each track.
-mapTracks :: (Status.T t BPM -> Status.T u BPM) ->
-  (RTB.T t (T a) -> RTB.T u (T b)) -> File t a -> File u b
-mapTracks fbpm frtb m = File
+-- | Modifies a file by applying functions to each track.
+mapTracks :: (RTB.T t (T a) -> RTB.T u (T b)) -> File t a -> File u b
+mapTracks frtb m = File
   { resolution = resolution m
-  , tempoTrack = fbpm $ tempoTrack m
-  , signatureTrack = signatureTrack m
   , trackZero = frtb $ trackZero m
   , tracks = map (mapSnd frtb) $ tracks m }
   where mapSnd = fmap
 
 unifyFile :: (NN.C t) => File t Bool -> File t t
-unifyFile = mapTracks id unifyEvents
+unifyFile = mapTracks unifyEvents
 
 splitFile :: (NN.C t) => File t t -> File t Bool
-splitFile = mapTracks id splitEvents
+splitFile = mapTracks splitEvents
 
 -- | Uses the file's tempo track to convert.
 toTimeFile :: File Beats a -> File Seconds a
-toTimeFile m = mapTracks (Status.mapRTB ttt) ttt m
-  where ttt = toTimeTrack $ tempoTrack m
+toTimeFile m = mapTracks (toTimeTrack $ tempoTrack m) m
 
 -- | Uses the file's tempo track to convert.
 fromTimeFile :: File Seconds a -> File Beats a
-fromTimeFile m = mapTracks (Status.mapRTB ftt) ftt m
-  where ftt = fromTimeTrack $ tempoTrack m
+fromTimeFile m = mapTracks (fromTimeTrack $ tempoTrack m) m
 
 -- | Uses the file's resolution to convert.
 fromTickFile :: File Ticks a -> File Beats a
-fromTickFile m = mapTracks (fromTickStatus res) (fromTickTrack res) m
-  where res = resolution m
+fromTickFile m = mapTracks (fromTickTrack $ resolution m) m
 
 -- | Uses the file's resolution to convert.
 toTickFile :: File Beats a -> File Ticks a
-toTickFile m = mapTracks (toTickStatus res) (toTickTrack res) m
-  where res = resolution m
+toTickFile m = mapTracks (toTickTrack $ resolution m) m
 
 -- | Decodes a tempo from a MIDI event.
 getTempo :: T a -> Maybe BPM
@@ -107,15 +102,9 @@ getSignature _ = Nothing
 readFile :: F.T -> Maybe (File Ticks Bool)
 readFile (F.Cons F.Parallel (F.Ticks res) trks) = Just $
   case map (fmap readEvent . RTB.mapTime Ticks) trks of
-    [] -> File (fromIntegral res) (Status.Stay 120) (Status.Stay $ 4 // 4)
-      RTB.empty []
-    meta : rest -> File res' stempo ssig tzero rest' where
-      res' = fromIntegral res
-      (ttempo, meta') = RTB.partitionMaybe getTempo meta
-      (tsig, tzero) = RTB.partitionMaybe getSignature meta'
-      stempo = Status.fromRTB 120 ttempo
-      ssig = validSignatures $ Status.fromRTB (4 // 4) $ fromTickTrack res' tsig
-      rest' = map extractName rest
+    [] -> File res' RTB.empty []
+    meta : rest -> File res' meta $ map extractName rest where
+    where res' = fromIntegral res
 readFile _ = Nothing
 
 -- | Encodes a tempo as a MIDI event.
@@ -141,20 +130,10 @@ makeSignature (TimeSignature mult (Beats unit)) = isPowerOf2 (NN.toNumber unit) 
       (n', 0) -> (+1) <$> isPowerOf2' n'
       _ -> Nothing
 
-showFile :: File Ticks Bool -> Maybe F.T
-showFile f = let
-  res = resolution f
-  tempo = Status.toRTB' $ Status.clean $ makeTempo <$> tempoTrack f
-    :: RTB.T Ticks (T Bool)
-  mbsigs = traverse makeSignature $ toTickTrack res $ Status.toRTB' $
-    Status.cleanRedundant $ renderSignatures $ signatureTrack f
-    :: Maybe (RTB.T Ticks (T Bool))
-  resttrks = map (uncurry attachName) $ tracks f
-    :: [RTB.T Ticks (T Bool)]
-  in mbsigs >>= \sigs -> return $ let
-    trk0 = RTB.merge tempo $ RTB.merge sigs $ trackZero f
-    in F.Cons F.Parallel (F.Ticks $ fromIntegral res) $
-      map (fmap showEvent . RTB.mapTime unTicks) $ trk0 : resttrks
+showFile :: File Ticks Bool -> F.T
+showFile f = F.Cons F.Parallel (F.Ticks $ fromIntegral $ resolution f) $
+  map (fmap showEvent . RTB.mapTime unTicks) $
+  trackZero f : map (uncurry attachName) (tracks f)
 
 extractName :: (NN.C t) => RTB.T t (T a) -> (Maybe String, RTB.T t (T a))
 extractName rtb = case RTB.viewL rtb of

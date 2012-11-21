@@ -100,9 +100,7 @@ run c i d fin fout = Load.fromFile fin >>= \f -> case MIDI.readFile f of
   Just m  -> let
     auto = fmap MIDI.readEvent $ pgToMIDI c d $ getPG c i m
     m' = m { MIDI.tracks = [(Just "Autoplay", auto)] }
-    in case MIDI.showFile m' of
-      Nothing -> putStrLn "time signature error"
-      Just f' -> Save.toFile fout f'
+    in Save.toFile fout $ MIDI.showFile m'
 
 main :: IO ()
 main = getArgs >>= \argv -> case argv of

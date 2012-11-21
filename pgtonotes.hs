@@ -97,9 +97,7 @@ run c i d tun fin fout = Load.fromFile fin >>= \f -> case MIDI.readFile f of
     trks = playStrings d tun $ getPG c i unifiedTime
     m' = MIDI.toTickFile $ MIDI.fromTimeFile $ MIDI.splitFile $
       unifiedTime { MIDI.tracks = trks }
-    in case MIDI.showFile m' of
-      Nothing -> putStrLn "time signature error"
-      Just f' -> Save.toFile fout f'
+    in Save.toFile fout $ MIDI.showFile m'
 
 main :: IO ()
 main = getArgs >>= \argv -> case argv of
