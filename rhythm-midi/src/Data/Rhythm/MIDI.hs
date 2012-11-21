@@ -1,6 +1,8 @@
--- | A format for type 1 (parallel) MIDI files, encoded with beats/ticks, where
--- the first track is reserved for tempo and time signature changes, and track
--- names are stored separately instead of as MIDI events.
+{- |
+A format for type 1 (parallel) MIDI files, encoded with beats/ticks, where the
+first track is reserved for tempo and time signature changes, and track names
+are stored separately instead of as MIDI events.
+-}
 module Data.Rhythm.MIDI where
 
 import qualified Sound.MIDI.File as F

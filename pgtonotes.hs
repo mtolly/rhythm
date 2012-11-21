@@ -1,8 +1,9 @@
+{- |
+Converts a Pro Guitar chart to listenable MIDI notes. Requires the rhythm,
+rhythm-midi, rhythm-rockband, and midiproadapter packages. The generated MIDI
+file will have 6 tracks (on 6 channels) representing the 6 guitar strings.
+-}
 module Main where
-
--- pro guitar to MIDI notes
--- example app using: rhythm, rhythm-midi, rhythm-rockband, midiproadapter
--- generates 6 tracks of pitches for the 6 strings of a pro guitar track.
 
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret

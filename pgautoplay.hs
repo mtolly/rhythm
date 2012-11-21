@@ -1,9 +1,9 @@
+{- |
+Generates the appropriate MIDI Pro Adapter inputs to (hopefully) FC a Pro Guitar
+chart. Requires the rhythm, rhythm-midi, rhythm-rockband, and midiproadapter
+packages.
+-}
 module Main where
-
--- pro guitar autoplayer
--- example app using: rhythm, rhythm-midi, rhythm-rockband, midiproadapter
--- takes a rock band mid, and produces a mid which (hopefully) fc's pro gtr/bass
--- when fed into the midi pro adapter.
 
 import Data.Rhythm.Event
 import Data.Rhythm.Interpret
