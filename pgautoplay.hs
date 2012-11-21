@@ -14,6 +14,7 @@ import qualified Data.Rhythm.RockBand.Lex.ProGuitar as PG
 import qualified Data.RockBand.MIDIProAdapter as MPA
 
 import qualified Data.EventList.Relative.TimeBody as RTB
+import qualified Data.Rhythm.EventList as RTB
 import qualified Numeric.NonNegative.Class as NN
 
 import qualified Sound.MIDI.Message.Channel.Voice as V
@@ -25,9 +26,7 @@ import qualified Sound.MIDI.File.Save as Save
 import System.Environment (getArgs)
 import Data.Char (toUpper)
 import Control.Applicative
-import Control.Monad
 import Data.Maybe
-import Data.Traversable
 import Control.Monad.Trans.State
 import Data.List (nubBy)
 import Data.Function (on)
@@ -36,19 +35,13 @@ import qualified Data.Map as Map
 
 -- | Removes redundant fret change events.
 cleanup :: (NN.C t) => RTB.T t MPA.GtrMessage -> RTB.T t MPA.GtrMessage
-cleanup rtb = evalState (rtbFilterA f rtb) Map.empty where
+cleanup rtb = evalState (RTB.filterA f rtb) Map.empty where
   f :: MPA.GtrMessage -> State (Map.Map MPA.GtrString MPA.GtrFret) Bool
   f (MPA.Fret str frt) = do
     redundant <- gets $ \mp -> Map.lookup str mp == Just frt
     if redundant then return False
       else modify (Map.insert str frt) >> return True
   f _ = return True
-
-rtbFilterA :: (NN.C t, Applicative f) =>
-  (a -> f Bool) -> RTB.T t a -> f (RTB.T t a)
-rtbFilterA g = fmap (RTB.mapMaybe ifSnd) . traverse attachG where
-  ifSnd (x, b) = guard b >> Just x
-  attachG x = (\b -> (x, b)) <$> g x
 
 playEvent :: [PG.DiffEvent] -> [MPA.GtrMessage]
 playEvent evts = fretMsgs ++ strumMsgs where
@@ -119,4 +112,3 @@ main = getArgs >>= \argv -> case argv of
     , "cont is one of: Squier Mustang"
     , "inst is one of: Guitar Bass"
     , "diff is one of: Easy Medium Hard Expert" ]
-

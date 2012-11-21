@@ -15,6 +15,7 @@ import qualified Data.Rhythm.RockBand.Lex.ProGuitar as PG
 import qualified Data.RockBand.MIDIProAdapter as MPA
 
 import qualified Data.EventList.Relative.TimeBody as RTB
+import qualified Data.Rhythm.EventList as RTB
 import qualified Numeric.NonNegative.Class as NN
 
 import qualified Sound.MIDI.File.Event as E
@@ -31,12 +32,12 @@ import Control.Monad.Fix (fix)
 
 playString :: Difficulty -> SixString -> SixTuning Int ->
   RTB.T Seconds (PG.T Seconds) -> RTB.T Seconds (MIDI.T Seconds)
-playString diff str tun = rtbJoin . fmap f where
+playString diff str tun = RTB.join . fmap f where
   f :: PG.T Seconds -> RTB.T Seconds (MIDI.T Seconds)
   f (Length len (PG.DiffEvent diff' devt)) | diff == diff' = case devt of
     PG.Note str' frt typ | str == str' -> case typ of
       PG.ArpeggioForm -> RTB.empty
-      PG.Bent -> RTB.merge note $ rtbTake len $ bender (1 / 4) ch
+      PG.Bent -> RTB.merge note $ RTB.take len $ bender (1 / 4) ch
       _ -> RTB.cons 0 (resetPB ch) note
       where ch = toEnum $ fromEnum str
             p = V.toPitch $ play str frt tun
@@ -112,4 +113,3 @@ main = getArgs >>= \argv -> case argv of
     , "tune is one of: Standard, DropD, or offsets from standard tuning"
     , "  in the form: \"[-2, 0, 0, 0, 0, 0]\" (meaning, drop D)"
     ]
-

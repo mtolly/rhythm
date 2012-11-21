@@ -23,6 +23,7 @@ Library
                     Data.Rhythm.Interpret
                     Data.Rhythm.Status
                     Data.Rhythm.Guitar
+                    Data.Rhythm.EventList
 
   hs-source-dirs:   src
   ghc-options:      -Wall

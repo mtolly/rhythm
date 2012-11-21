@@ -57,23 +57,6 @@ toTime (Beats bpm) (Beats bts) = Seconds $ (bts / bpm) * 60
 
 fromTime :: BPM -> Seconds -> Beats
 fromTime (Beats bpm) (Seconds secs) = Beats $ (secs / 60) * bpm
-
--- | Each event-list is merged into a new list, starting at its position in the
--- original list. This is equivalent to the monad function join, but the Monad
--- typeclass can't be used because of typeclass constraints.
-rtbJoin :: (NN.C t, Ord a) => RTB.T t (RTB.T t a) -> RTB.T t a
-rtbJoin rtb = case RTB.viewL rtb of
-  Nothing -> RTB.empty
-  Just ((dt, x), rtb') -> RTB.delay dt $ RTB.merge x $ rtbJoin rtb'
-
--- | Drops all events after the specified amount of time, including events
--- exactly on the edge.
-rtbTake :: (NN.C t, Ord a) => t -> RTB.T t a -> RTB.T t a
-rtbTake t rtb = case RTB.viewL rtb of
-  Nothing -> rtb
-  Just ((dt, x), rtb') -> case NN.split t dt of
-    (_, (True, _)) {- t <= dt -} -> RTB.empty
-    (_, (False, d)) {- t > dt -} -> RTB.cons dt x $ rtbTake d rtb'
     
 
 -- | Uses tempos to convert an event-list from beatstamps to timestamps.

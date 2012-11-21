@@ -16,6 +16,7 @@ module Data.Rhythm.Event where
 import Data.Rhythm.Time
 import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
+import qualified Data.Rhythm.EventList as RTB
 import Control.Monad (guard, (>=>))
 
 -- | Class for events which store an event over some duration of time. Such an
@@ -45,7 +46,7 @@ instance Functor (Event l p) where
 -- value as the old duration event.
 splitEvents :: (NN.C t, Ord l, Ord p) =>
   RTB.T t (Event l p t) -> RTB.T t (Event l p Bool)
-splitEvents = rtbJoin . fmap f where
+splitEvents = RTB.join . fmap f where
   f (Point x) = RTB.singleton NN.zero (Point x)
   f (Length dt x) = RTB.fromPairList
     [(NN.zero, Length True x), (dt, Length False x)]
