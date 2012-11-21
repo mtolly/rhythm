@@ -57,7 +57,6 @@ toTime (Beats bpm) (Beats bts) = Seconds $ (bts / bpm) * 60
 
 fromTime :: BPM -> Seconds -> Beats
 fromTime (Beats bpm) (Seconds secs) = Beats $ (secs / 60) * bpm
-    
 
 -- | Uses tempos to convert an event-list from beatstamps to timestamps.
 toTimeTrack :: Status.T Beats BPM -> RTB.T Beats a -> RTB.T Seconds a

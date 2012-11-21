@@ -54,67 +54,47 @@ showEvent (Length b (Note ch p v)) =
   E.MIDIEvent $ C.Cons ch $ C.Voice $ (if b then V.NoteOn else V.NoteOff) p v
 showEvent (Point evt) = evt
 
-unifyFile :: (NN.C t) => File t Bool -> File t t
-unifyFile m = File
+mapTracks :: (Status.T t BPM -> Status.T u BPM) ->
+  (RTB.T t (T a) -> RTB.T u (T b)) -> File t a -> File u b
+mapTracks fbpm frtb m = File
   { resolution = resolution m
-  , tempoTrack = tempoTrack m
+  , tempoTrack = fbpm $ tempoTrack m
   , signatureTrack = signatureTrack m
-  , trackZero = unifyEvents $ trackZero m
-  , tracks = map (fmap unifyEvents) $ tracks m }
+  , trackZero = frtb $ trackZero m
+  , tracks = map (mapSnd frtb) $ tracks m }
+  where mapSnd = fmap
+
+unifyFile :: (NN.C t) => File t Bool -> File t t
+unifyFile = mapTracks id unifyEvents
 
 splitFile :: (NN.C t) => File t t -> File t Bool
-splitFile m = File
-  { resolution = resolution m
-  , tempoTrack = tempoTrack m
-  , signatureTrack = signatureTrack m
-  , trackZero = splitEvents $ trackZero m
-  , tracks = map (fmap splitEvents) $ tracks m }
+splitFile = mapTracks id splitEvents
 
+-- | Uses the file's tempo track to convert.
 toTimeFile :: File Beats a -> File Seconds a
-toTimeFile m = File
-  { resolution = resolution m
-  , tempoTrack = Status.mapRTB toTimeTrack' tt
-  , signatureTrack = signatureTrack m
-  , trackZero = toTimeTrack' $ trackZero m
-  , tracks = map (fmap toTimeTrack') $ tracks m }
-  where tt = tempoTrack m
-        toTimeTrack' = toTimeTrack tt
+toTimeFile m = mapTracks (Status.mapRTB ttt) ttt m
+  where ttt = toTimeTrack $ tempoTrack m
 
+-- | Uses the file's tempo track to convert.
 fromTimeFile :: File Seconds a -> File Beats a
-fromTimeFile m = File
-  { resolution = resolution m
-  , tempoTrack = Status.mapRTB fromTimeTrack' tt
-  , signatureTrack = signatureTrack m
-  , trackZero = fromTimeTrack' $ trackZero m
-  , tracks = map (fmap fromTimeTrack') $ tracks m }
-  where tt = tempoTrack m
-        fromTimeTrack' = fromTimeTrack tt
+fromTimeFile m = mapTracks (Status.mapRTB ftt) ftt m
+  where ftt = fromTimeTrack $ tempoTrack m
 
--- | Uses the resolution of a file to convert it from ticks to beats.
+-- | Uses the file's resolution to convert.
 fromTickFile :: File Ticks a -> File Beats a
-fromTickFile f = File
-  { resolution = res
-  , tempoTrack = fromTickStatus res $ tempoTrack f
-  , signatureTrack = signatureTrack f
-  , trackZero = fromTickTrack res $ trackZero f
-  , tracks = map (fmap $ fromTickTrack res) $ tracks f
-  } where res = resolution f
+fromTickFile m = mapTracks (fromTickStatus res) (fromTickTrack res) m
+  where res = resolution m
 
--- | Uses the resolution of a file to convert it from beats to ticks.
+-- | Uses the file's resolution to convert.
 toTickFile :: File Beats a -> File Ticks a
-toTickFile f = File
-  { resolution = res
-  , tempoTrack = toTickStatus res $ tempoTrack f
-  , signatureTrack = signatureTrack f
-  , trackZero = toTickTrack res $ trackZero f
-  , tracks = map (fmap $ toTickTrack res) $ tracks f
-  } where res = resolution f
+toTickFile m = mapTracks (toTickStatus res) (toTickTrack res) m
+  where res = resolution m
 
 -- | Decodes a tempo from a MIDI event.
 getTempo :: T a -> Maybe BPM
-getTempo (Point (E.MetaEvent (M.SetTempo mspqn))) = Just bpm
-  where bpm = 60000000 / fromIntegral mspqn
-  -- MIDI tempo is microsecs/quarternote.
+getTempo (Point (E.MetaEvent (M.SetTempo microsecsPerBeat))) = Just beatsPerMin
+  where beatsPerMin = microsecsPerMin / fromIntegral microsecsPerBeat
+        microsecsPerMin = 60000000
 getTempo _ = Nothing
 
 -- | Decodes a time signature from a MIDI event.
@@ -139,7 +119,9 @@ readFile _ = Nothing
 
 -- | Encodes a tempo as a MIDI event.
 makeTempo :: BPM -> T a
-makeTempo bpm = Point $ E.MetaEvent $ M.SetTempo $ floor $ 60000000 / bpm
+makeTempo beatsPerMin = Point $ E.MetaEvent $ M.SetTempo microsecsPerBeat
+  where microsecsPerBeat = floor $ microsecsPerMin / beatsPerMin
+        microsecsPerMin = 60000000
 
 -- | Encodes a time signature as a MIDI event, or Nothing if the denominator of
 -- the signature isn't a power of 2.
