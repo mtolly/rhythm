@@ -6,12 +6,15 @@ import Data.Rhythm.Event
 import Data.Time
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Sound.MIDI.Message.Channel.Voice as V
+import qualified Numeric.NonNegative.Wrapper as NN
 
 data Song = Song
   { title :: String
   , arrangement :: String
   , part :: Int
   , offset :: Rational -- seconds, can be negative
+    -- usually -10 for normal songs, can be slightly different
+    -- some technique challenges have 0
   , songLength :: Seconds
   , lastConversion :: UTCTime
   , phrases :: [Phrase]
@@ -19,8 +22,8 @@ data Song = Song
   , linkedDiffs :: [LinkedDiff]
   , phraseProperties :: [PhraseProperty]
   , chordTemplates :: [ChordTemplate]
-  , fretHandMuteTemplates :: () -- TODO
-  , ebeats :: RTB.T Seconds (Maybe Int) -- Nothing is -1. Could be Bool or Beat?
+  , fretHandMuteTemplates :: () -- TODO none observed on disc
+  , ebeats :: RTB.T Seconds (Maybe NN.Int) -- Nothing is -1, could be Bool/Beat?
   , sections :: RTB.T Seconds (String, Int) -- (name, number)
   , events :: RTB.T Seconds String
   , levels :: [Level]
@@ -40,9 +43,9 @@ data LinkedDiff = LinkedDiff
   } deriving (Eq, Ord, Show, Read)
 
 data PhraseProperty = PhraseProperty
-  { phraseDifficulty :: Int -- can be -1
+  { phraseDifficulty :: Maybe NN.Int -- Nothing is -1
   , empty :: Bool
-  , levelJump :: Int -- Int or Bool?
+  , levelJump :: Int -- always 0 on disc
   , phraseId :: Int
   , redundant :: Bool
   } deriving (Eq, Ord, Show, Read)
@@ -67,7 +70,7 @@ data Level = Level
   { levelDifficulty :: Int
   , notes :: RTB.T Seconds (Event' Note Seconds) -- 2nd seconds is sustain
   , chords :: RTB.T Seconds Chord
-  , fretHandMutes :: () -- TODO
+  , fretHandMutes :: () -- TODO none observed on disc
   , anchors :: RTB.T Seconds GtrFret
   , handShapes :: RTB.T Seconds (Event' Int Seconds) -- Int is chordId
   } deriving (Eq, Ord, Show)
