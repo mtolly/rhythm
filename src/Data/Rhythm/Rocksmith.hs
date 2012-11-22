@@ -5,6 +5,7 @@ import Data.Rhythm.Guitar
 import Data.Rhythm.Event
 import Data.Time
 import qualified Data.EventList.Relative.TimeBody as RTB
+import qualified Sound.MIDI.Message.Channel.Voice as V
 
 data Song = Song
   { title :: String
@@ -64,7 +65,7 @@ data ChordTemplate = ChordTemplate
 
 data Level = Level
   { levelDifficulty :: Int
-  , notes :: RTB.T Seconds Note
+  , notes :: RTB.T Seconds (Event' Note Seconds) -- 2nd seconds is sustain
   , chords :: RTB.T Seconds Chord
   , fretHandMutes :: () -- TODO
   , anchors :: RTB.T Seconds GtrFret
@@ -82,7 +83,6 @@ data Note = Note
   , pullOff :: Bool
   , slideTo :: Maybe GtrFret
   , string :: SixString
-  , sustain :: Seconds
   , tremolo :: Bool
   } deriving (Eq, Ord, Show)
 
@@ -92,3 +92,10 @@ data Chord = Chord
   , ignoreChord :: Bool
   , strum :: String
   } deriving (Eq, Ord, Show, Read)
+
+type Vocals = RTB.T Seconds (Event' Vocal Seconds)
+
+data Vocal = Vocal
+  { note :: V.Pitch
+  , lyric :: String
+  } deriving (Eq, Ord, Show)
