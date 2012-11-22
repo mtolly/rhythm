@@ -48,7 +48,7 @@ data PhraseProperty = PhraseProperty
   , levelJump :: Int -- always 0 on disc
   , phraseId :: Int
   , redundant :: Bool
-  } deriving (Eq, Ord, Show, Read)
+  } deriving (Eq, Ord, Show)
 
 data ChordTemplate = ChordTemplate
   { chordName :: String
