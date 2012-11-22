@@ -14,7 +14,7 @@ data T
   | Beat -- ^ A thin barline; a beat in the middle of a measure.
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-interpret :: (NN.C t) => Interpreter (MIDI.T t) T
+interpret :: (NN.C a) => Interpreter (MIDI.T a) T
 interpret (Length _ (MIDI.Note _ p _)) = case V.fromPitch p of
   12 -> single Bar
   13 -> single Beat

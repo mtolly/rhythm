@@ -47,7 +47,7 @@ data PercussionType
   | Clap
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-interpret :: (NN.C t) => Interpreter (MIDI.T t) (T t)
+interpret :: (NN.C a) => Interpreter (MIDI.T a) (T a)
 interpret (Length len (MIDI.Note _ p _)) = case V.fromPitch p of
   0 -> single $ Length len RangeShift
   1 -> single $ Point LyricShift

@@ -56,6 +56,7 @@ data Trainer
   | TrainerEnd Int
   deriving (Eq, Ord, Show, Read)
 
+-- | The returned String is the instrument-specific part: @pg@, @pb@, @key@.
 readTrainer :: String -> Maybe (Trainer, String)
 readTrainer str = readBegin <|> readNorm <|> readEnd where
   readBegin = stripPrefix "[begin_" str >>= Just . span isLetter >>= \(x,xs) ->
@@ -74,6 +75,7 @@ readTrainer str = readBegin <|> readNorm <|> readEnd where
         [(n, "]")] -> Just (TrainerBegin n, x)
         _ -> Nothing
 
+-- | The String parameter is the instrument-specific part: @pg@, @pb@, @key@.
 showTrainer :: Trainer -> String -> String
 showTrainer tr inst = case tr of
   TrainerBegin n ->
@@ -83,6 +85,7 @@ showTrainer tr inst = case tr of
   TrainerNorm n ->
     "[" ++ inst ++ "_norm song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
 
+-- | Creates a note on channel 0, with a velocity of 96.
 standardNote :: V.Pitch -> MIDI.Note
 standardNote p = MIDI.Note (C.toChannel 0) p (V.toVelocity 96)
 
@@ -91,5 +94,6 @@ standardNote p = MIDI.Note (C.toChannel 0) p (V.toVelocity 96)
 blip :: V.Pitch -> MIDI.T Beats
 blip p = Length (1 / 32) $ standardNote p
 
+-- | @stripSuffix \"def\" \"abcdef\" ==> Just \"abc\"@
 stripSuffix :: Eq a => [a] -> [a] -> Maybe [a]
 stripSuffix xs ys = fmap reverse $ stripPrefix (reverse xs) (reverse ys)

@@ -143,7 +143,7 @@ showStrumMap StrumDefault = "[map StrumMap_Default]"
 showStrumMap Pick = "[map StrumMap_Pick]"
 showStrumMap SlapBass = "[map StrumMap_SlapBass]"
 
-uninterpret :: Uninterpreter (T t) (MIDI.T t)
+uninterpret :: Uninterpreter (T a) (MIDI.T a)
 uninterpret (Point p) = (:[]) . Point . E.MetaEvent . M.TextEvent $ case p of
   Mood m -> showMood m
   HandMap hm -> showHandMap hm
@@ -163,4 +163,3 @@ uninterpret (Length len l) = Length len . standardNote . V.toPitch <$>
         Note f -> fromEnum f
         ForceHOPO -> 5
         ForceStrum -> 6
-

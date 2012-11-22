@@ -90,7 +90,7 @@ data Hit = SoftHit | HardHit deriving (Eq, Ord, Show, Read, Enum, Bounded)
 -- | Used in 'Animation' events to control which hand hits a drum.
 data Hand = LH | RH deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-interpretAnimation :: (NN.C t) => Interpreter (MIDI.T t) Animation
+interpretAnimation :: (NN.C a) => Interpreter (MIDI.T a) Animation
 interpretAnimation (Length _ (MIDI.Note _ p _)) = case V.fromPitch p of
   24 -> single KickRF
   26 -> single $ Snare HardHit LH
@@ -122,7 +122,7 @@ interpretAnimation (Length _ (MIDI.Note _ p _)) = case V.fromPitch p of
   _  -> none
 interpretAnimation _ = none
 
-interpret :: (NN.C t) => Interpreter (MIDI.T t) (T t)
+interpret :: (NN.C a) => Interpreter (MIDI.T a) (T a)
 interpret l@(Length len (MIDI.Note _ p _)) = case V.fromPitch p of
   25 -> single $ Length len HihatOpen
   -- Notes

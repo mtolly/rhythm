@@ -38,7 +38,7 @@ data Length
 data LaneRange = C | D | E | F | G | A
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-interpret :: (NN.C t) => Interpreter (MIDI.T t) (T t)
+interpret :: (NN.C a) => Interpreter (MIDI.T a) (T a)
 interpret (Length len (MIDI.Note _ p _)) = case V.fromPitch p of
   0 -> single $ Point $ LaneShift C
   2 -> single $ Point $ LaneShift D

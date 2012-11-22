@@ -74,7 +74,7 @@ data SlideType = NormalSlide | ReversedSlide
 data StrumArea = High | Mid | Low
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-interpret :: (NN.C t) => Interpreter (MIDI.T t) (T t)
+interpret :: (NN.C a) => Interpreter (MIDI.T a) (T a)
 interpret (Length len (MIDI.Note ch p vel)) = case V.fromPitch p of
   i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
   16 -> single $ Length len SlashChords
@@ -176,6 +176,7 @@ readChordName str
 showChordName :: Difficulty -> String -> String
 showChordName d ch = "[chrd" ++ show (fromEnum d) ++ " " ++ ch ++ "]"
 
+-- | Generates a fret number for each note or chord.
 autoHandPosition :: (NN.C t) => RTB.T t DiffEvent -> RTB.T t GtrFret
 autoHandPosition = RTB.mapMaybe getFret . RTB.collectCoincident where
   getFret :: [DiffEvent] -> Maybe GtrFret

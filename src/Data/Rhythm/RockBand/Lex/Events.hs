@@ -29,7 +29,7 @@ data Crowd
   | Clap Bool
   deriving (Eq, Ord, Show, Read)
 
-interpret :: Interpreter (MIDI.T t) T
+interpret :: Interpreter (MIDI.T a) T
 interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
   (readCrowd -> Just c) -> single $ Crowd c
   (readPractice -> Just sec) -> single $ Practice sec
