@@ -118,8 +118,8 @@ makeTempo beatsPerMin = Point $ E.MetaEvent $ M.SetTempo microsecsPerBeat
 -- | Encodes a time signature as a MIDI event, or Nothing if the denominator of
 -- the signature isn't a power of 2.
 makeSignature :: TimeSignature -> Maybe (T a)
-makeSignature (TimeSignature mult (Beats unit)) = isPowerOf2 (NN.toNumber unit) >>=
-  \pow -> Just $ Point $ E.MetaEvent $ M.TimeSig (fromIntegral mult)
+makeSignature (TimeSignature mult (Beats unit)) = isPowerOf2 (NN.toNumber unit)
+  >>= \pow -> Just $ Point $ E.MetaEvent $ M.TimeSig (fromIntegral mult)
     (2 - fromIntegral pow) 24 8 where
     isPowerOf2 :: Rational -> Maybe Integer
     isPowerOf2 r = case (numerator r, denominator r) of
@@ -131,6 +131,14 @@ makeSignature (TimeSignature mult (Beats unit)) = isPowerOf2 (NN.toNumber unit) 
     isPowerOf2' n = case quotRem n 2 of
       (n', 0) -> (+1) <$> isPowerOf2' n'
       _ -> Nothing
+
+makeTimeTrack :: (Ord a) => Status.T Beats BPM -> SignatureTrack ->
+  Either TimeSignature (RTB.T Beats (T a))
+makeTimeTrack bpms sigs = case RTB.partitionMaybe makeSignature $
+  Status.toRTB' $ renderSignatures $ sigs of
+    (good, bad) -> case RTB.viewL bad of
+      Nothing -> Right $ RTB.merge good $ fmap makeTempo $ Status.toRTB' bpms
+      Just ((_, badSig), _) -> Left badSig
 
 showFile :: File Ticks Bool -> F.T
 showFile f = F.Cons F.Parallel (F.Ticks $ fromIntegral $ resolution f) $
