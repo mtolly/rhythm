@@ -8,25 +8,25 @@ import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Numeric.NonNegative.Wrapper as NN
 
-data Song = Song
+data Song t a = Song
   { title :: String
   , arrangement :: String
   , part :: Int
-  , offset :: Offset Seconds
-    -- usually -10 for normal songs, can be slightly different
+  , offset :: Offset t
+    -- usually -10 seconds for normal songs, can be slightly different
     -- some technique challenges have 0
-  , songLength :: Seconds
+  , songLength :: t
   , lastConversion :: UTCTime
   , phrases :: [Phrase]
-  , phraseIterations :: RTB.T Seconds Int -- Int is phraseId
+  , phraseIterations :: RTB.T t Int -- Int is phraseId
   , linkedDiffs :: [LinkedDiff]
   , phraseProperties :: [PhraseProperty]
   , chordTemplates :: [ChordTemplate]
   , fretHandMuteTemplates :: () -- TODO none observed on disc
-  , ebeats :: RTB.T Seconds (Maybe NN.Int) -- Nothing is -1, could be Bool/Beat?
-  , sections :: RTB.T Seconds (String, Int) -- (name, number)
-  , events :: RTB.T Seconds String
-  , levels :: [Level]
+  , ebeats :: RTB.T t (Maybe NN.Int) -- Nothing is -1, can be Bool/Beat?
+  , sections :: RTB.T t (String, Int) -- (name, number)
+  , events :: RTB.T t String
+  , levels :: [(Int, Level t a)] -- Int is difficulty
   } deriving (Eq, Ord, Show)
 
 data Phrase = Phrase
@@ -45,7 +45,7 @@ data LinkedDiff = LinkedDiff
 data PhraseProperty = PhraseProperty
   { phraseDifficulty :: Maybe NN.Int -- Nothing is -1
   , empty :: Bool
-  , levelJump :: Int -- always 0 on disc
+  , levelJump :: Int -- always 0 on disc, might be Bool
   , phraseId :: Int
   , redundant :: Bool
   } deriving (Eq, Ord, Show)
@@ -66,14 +66,20 @@ data ChordTemplate = ChordTemplate
   , fret5 :: Maybe GtrFret
   } deriving (Eq, Ord, Show)
 
-data Level = Level
-  { levelDifficulty :: Int
-  , notes :: RTB.T Seconds (Event' Note Seconds) -- 2nd seconds is sustain
-  , chords :: RTB.T Seconds Chord
-  , fretHandMutes :: () -- TODO none observed on disc
-  , anchors :: RTB.T Seconds GtrFret
-  , handShapes :: RTB.T Seconds (Event' Int Seconds) -- Int is chordId
-  } deriving (Eq, Ord, Show)
+type Level t a = RTB.T t (Event Length Point a)
+
+data Length
+  = NoteEvent Note
+  | HandShape Int -- chordId
+  deriving (Eq, Ord, Show)
+
+instance Long Length
+
+data Point
+  = ChordEvent Chord
+  | FretHandMute -- TODO none observed on disc
+  | Anchor GtrFret
+  deriving (Eq, Ord, Show)
 
 data Note = Note
   { bend :: GtrFret -- the number of half-steps to bend up, 0 for no bend
@@ -96,7 +102,7 @@ data Chord = Chord
   , strum :: String
   } deriving (Eq, Ord, Show, Read)
 
-type Vocals = RTB.T Seconds (Event' Vocal Seconds)
+type Vocals t a = RTB.T t (Event' Vocal a)
 
 data Vocal = Vocal
   { note :: V.Pitch
