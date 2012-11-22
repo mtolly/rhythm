@@ -50,7 +50,7 @@ playString diff str tun = RTB.join . fmap f where
 -- | An infinite event-list of pitch bend events, oscillating between no bend
 -- and maximum bend up. The argument is the period (time of a full cycle).
 bender :: (Ord a) => Seconds -> C.Channel -> RTB.T Seconds (MIDI.T a)
-bender secs ch = RTB.merge (RTB.singleton 0 $ resetPB ch) $ fix attachRTB where
+bender secs ch = RTB.cons 0 (resetPB ch) $ fix attachRTB where
   attachRTB = foldr (.) id $ map (RTB.cons eventGap) bendEvents
   eventGap = secs / fromIntegral (length bendEvents)
   bendEvents = map

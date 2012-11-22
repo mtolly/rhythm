@@ -1,7 +1,7 @@
 {- |
-A format for type 1 (parallel) MIDI files, encoded with beats/ticks, where the
-first track is reserved for tempo and time signature changes, and track names
-are stored separately instead of as MIDI events.
+A container for type 1 (parallel) MIDI files, encoded with beats/ticks, where
+the first track is reserved for tempo and time signature changes, and track
+names are stored separately instead of as MIDI events.
 -}
 module Data.Rhythm.MIDI where
 
@@ -30,7 +30,7 @@ data File t a = File
   } deriving (Eq, Ord, Show)
 
 -- | It is an error to make a Point which holds a NoteOn or NoteOff.
--- It is also an error to make a "Length True (NoteOff _ _ 0)".
+-- It is also an error to make a @Length True (NoteOff _ _ 0)@.
 type T = Event Note E.T
 
 data Note = Note C.Channel V.Pitch V.Velocity
@@ -115,8 +115,8 @@ makeTempo beatsPerMin = Point $ E.MetaEvent $ M.SetTempo microsecsPerBeat
   where microsecsPerBeat = floor $ microsecsPerMin / beatsPerMin
         microsecsPerMin = 60000000
 
--- | Encodes a time signature as a MIDI event, or Nothing if the denominator of
--- the signature isn't a power of 2.
+-- | Encodes a time signature as a MIDI event. The denominator must be a power
+-- of 2, or Nothing will be returned.
 makeSignature :: TimeSignature -> Maybe (T a)
 makeSignature (TimeSignature mult (Beats unit)) = isPowerOf2 (NN.toNumber unit)
   >>= \pow -> Just $ Point $ E.MetaEvent $ M.TimeSig (fromIntegral mult)
