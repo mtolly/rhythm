@@ -12,7 +12,7 @@ data Song = Song
   { title :: String
   , arrangement :: String
   , part :: Int
-  , offset :: Rational -- seconds, can be negative
+  , offset :: Offset Seconds
     -- usually -10 for normal songs, can be slightly different
     -- some technique challenges have 0
   , songLength :: Seconds

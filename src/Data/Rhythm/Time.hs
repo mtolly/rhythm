@@ -71,3 +71,19 @@ toTickStatus = Status.mapRTB . toTickTrack
 
 fromTickStatus :: Resolution -> Status.T Ticks a -> Status.T Beats a
 fromTickStatus = Status.mapRTB . fromTickTrack
+
+-- | \"Undoing\" a non-negative number wrapper by adding a sign to it.
+data Offset a = Negative a | Positive a
+  deriving (Show, Read)
+
+instance (NN.C a) => Eq (Offset a) where
+  Negative x == Negative y = x == y
+  Positive x == Positive y = x == y
+  Negative x == Positive y = NN.zero == x && NN.zero == y
+  Positive x == Negative y = NN.zero == x && NN.zero == y
+
+instance (NN.C a) => Ord (Offset a) where
+  Positive x <= Positive y = x <= y
+  Negative x <= Negative y = y <= x
+  Negative _ <= Positive _ = True
+  x@(Positive _) <= y@(Negative _) = x == y
