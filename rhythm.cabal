@@ -1,7 +1,8 @@
 Name:               rhythm
 Version:            0.0.1
-Synopsis:           Types and operations on musical event information, such as
-                    the information used by rhythm action video games.
+Synopsis:           Process rhythm-action video game information
+Description:        A common set of types and operations for a variety of data
+                    formats which store events along a timeline.
 License:            GPL
 License-file:       LICENSE
 Author:             Michael Tolly
