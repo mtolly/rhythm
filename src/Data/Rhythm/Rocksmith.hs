@@ -23,7 +23,7 @@ data Song t a = Song
   , phraseProperties :: [PhraseProperty]
   , chordTemplates :: [ChordTemplate]
   , fretHandMuteTemplates :: () -- TODO none observed on disc
-  , ebeats :: RTB.T t (Maybe NN.Int) -- Nothing is -1, can be Bool/Beat?
+  , ebeats :: RTB.T t Bool -- Trues are [1, 2, 3...], Falses are -1
   , sections :: RTB.T t (String, Int) -- (name, number)
   , events :: RTB.T t String
   , levels :: [(Int, Level t a)] -- Int is difficulty
