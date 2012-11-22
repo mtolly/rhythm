@@ -18,6 +18,7 @@ import qualified Numeric.NonNegative.Class as NN
 import qualified Data.EventList.Relative.TimeBody as RTB
 import qualified Data.Rhythm.EventList as RTB
 import Control.Monad (guard, (>=>))
+import Data.Void (Void)
 
 -- | Class for events which store an event over some duration of time. Such an
 -- event can be stored as an on/off pair, or a single event.
@@ -36,6 +37,9 @@ data Event l p t
   = Length t l -- ^ An event that has start and end points.
   | Point p -- ^ An event located at a single point in time.
   deriving (Eq, Ord, Show, Read)
+
+-- | For events without a 'Point' type.
+type Event' l t = Event l Void t
 
 instance Functor (Event l p) where
   fmap g (Length t l) = Length (g t) l
