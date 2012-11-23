@@ -29,6 +29,7 @@ Library
                     Data.Rhythm.Status
                     Data.Rhythm.Guitar
                     Data.Rhythm.EventList
+                    Data.Rhythm.Parser
                     
                     Data.Rhythm.FeedBack
                     Data.Rhythm.FeedBack.Lex
