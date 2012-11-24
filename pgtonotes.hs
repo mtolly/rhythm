@@ -6,7 +6,7 @@ file will have 6 tracks (on 6 channels) representing the 6 guitar strings.
 module Main where
 
 import Data.Rhythm.Event
-import Data.Rhythm.Interpret
+import Data.Rhythm.Parser
 import Data.Rhythm.Guitar
 import Data.Rhythm.Time
 import qualified Data.Rhythm.MIDI as MIDI
@@ -71,13 +71,12 @@ playStrings diff tun pg = zipWith f [S6 .. S1] [6, 5 .. 1] where
 data Instrument = Guitar | Bass
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-getPG :: (NN.C t) =>
+getPG :: (NN.C t, Num t, Show t) =>
   MPA.GtrController -> Instrument -> MIDI.File t t -> RTB.T t (PG.T t)
 getPG c i mid = go $ fromMaybe (error "MIDI track not found") $ case c of
   MPA.Squier  -> MIDI.getTrack name22 mid <|> MIDI.getTrack name17 mid
   MPA.Mustang -> MIDI.getTrack name17 mid
-  where go t = fst3 $ interpretRTB PG.interpret t
-        fst3 (x, _, _) = x
+  where go t = RTB.catMaybes $ fst $ parseEvents PG.parse t
         name17 = "PART REAL_" ++ map toUpper (show i)
         name22 = name17 ++ "_22"
 

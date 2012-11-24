@@ -9,10 +9,10 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.Time
 import Data.Rhythm.Event
-import Data.Rhythm.Interpret
+import Data.Rhythm.Parser
+import Control.Arrow
 import Data.List (stripPrefix)
 import qualified Numeric.NonNegative.Class as NN
-import Control.Applicative
 
 data Length
   = Toms Drum -- ^ Change 'Yellow', 'Blue', and 'Green' cymbal notes to toms.
@@ -90,68 +90,72 @@ data Hit = SoftHit | HardHit deriving (Eq, Ord, Show, Read, Enum, Bounded)
 -- | Used in 'Animation' events to control which hand hits a drum.
 data Hand = LH | RH deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-interpretAnimation :: (NN.C a) => Interpreter (MIDI.T a) Animation
-interpretAnimation (Length _ (MIDI.Note _ p _)) = case V.fromPitch p of
-  24 -> single KickRF
-  26 -> single $ Snare HardHit LH
-  27 -> single $ Snare HardHit RH
-  28 -> single $ Snare SoftHit LH
-  29 -> single $ Snare SoftHit RH
-  30 -> single $ Hihat LH
-  31 -> single $ Hihat RH
-  32 -> single PercussionRH
+readAnimation :: V.Pitch -> Maybe Animation
+readAnimation p = case V.fromPitch p of
+  24 -> Just KickRF
+  -- 25 HihatOpen is a Length event
+  26 -> Just $ Snare HardHit LH
+  27 -> Just $ Snare HardHit RH
+  28 -> Just $ Snare SoftHit LH
+  29 -> Just $ Snare SoftHit RH
+  30 -> Just $ Hihat LH
+  31 -> Just $ Hihat RH
+  32 -> Just PercussionRH
   -- 33 unused
-  34 -> single $ Crash1 HardHit LH
-  35 -> single $ Crash1 SoftHit LH
-  36 -> single $ Crash1 HardHit RH
-  37 -> single $ Crash1 SoftHit RH
-  38 -> single $ Crash2 HardHit RH
-  39 -> single $ Crash2 SoftHit RH
-  40 -> single Crash1RHChokeLH
-  41 -> single Crash2RHChokeLH
-  42 -> single $ Ride RH
-  43 -> single $ Ride LH
-  44 -> single $ Crash2 HardHit LH
-  45 -> single $ Crash2 SoftHit LH
-  46 -> single $ Tom1 LH
-  47 -> single $ Tom1 RH
-  48 -> single $ Tom2 LH
-  49 -> single $ Tom2 RH
-  50 -> single $ FloorTom LH
-  51 -> single $ FloorTom RH
-  _  -> none
-interpretAnimation _ = none
+  34 -> Just $ Crash1 HardHit LH
+  35 -> Just $ Crash1 SoftHit LH
+  36 -> Just $ Crash1 HardHit RH
+  37 -> Just $ Crash1 SoftHit RH
+  38 -> Just $ Crash2 HardHit RH
+  39 -> Just $ Crash2 SoftHit RH
+  40 -> Just Crash1RHChokeLH
+  41 -> Just Crash2RHChokeLH
+  42 -> Just $ Ride RH
+  43 -> Just $ Ride LH
+  44 -> Just $ Crash2 HardHit LH
+  45 -> Just $ Crash2 SoftHit LH
+  46 -> Just $ Tom1 LH
+  47 -> Just $ Tom1 RH
+  48 -> Just $ Tom2 LH
+  49 -> Just $ Tom2 RH
+  50 -> Just $ FloorTom LH
+  51 -> Just $ FloorTom RH
+  _  -> Nothing
 
-interpret :: (NN.C a) => Interpreter (MIDI.T a) (T a)
-interpret l@(Length len (MIDI.Note _ p _)) = case V.fromPitch p of
-  25 -> single $ Length len HihatOpen
-  -- Notes
-  i | let (oct, k) = quotRem i 12
-    , 5 <= oct && oct <= 8
-    , 0 <= k && k <= 4
-    -> single $ Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k
-  103 -> single $ Length len Solo
-  105 -> single $ Length len Player1
-  106 -> single $ Length len Player2
-  110 -> single $ Length len $ Toms Yellow
-  111 -> single $ Length len $ Toms Blue
-  112 -> single $ Length len $ Toms Green
-  116 -> single $ Length len Overdrive
-  120 -> single $ Length len Activation
-  121 -> return []
-  122 -> return []
-  123 -> return []
-  124 -> return []
-  126 -> single $ Length len SingleRoll
-  127 -> single $ Length len DoubleRoll
-  _ -> map (Point . Animation) <$> interpretAnimation l
-interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
-  (readMix -> Just p) -> single $ Point p
-  (readMood -> Just m) -> single $ Point $ Mood m
-  "[ride_side_true]" -> single $ Point $ Animation $ RideSide True
-  "[ride_side_false]" -> single $ Point $ Animation $ RideSide False
-  _ -> none
-interpret _ = none
+parse :: (NN.C a) => Parser (MIDI.T a) (Maybe (T a))
+parse = returnA >>= \x -> case x of
+  Length len n@(MIDI.Note _ p _) -> case V.fromPitch p of
+    25 -> single $ Length len HihatOpen
+    -- Notes
+    i | let (oct, k) = quotRem i 12
+      , 5 <= oct && oct <= 8
+      , 0 <= k && k <= 4
+      -> single $ Point $ DiffEvent (toEnum $ oct - 5) $ Note $ toEnum k
+    103 -> single $ Length len Solo
+    105 -> single $ Length len Player1
+    106 -> single $ Length len Player2
+    110 -> single $ Length len $ Toms Yellow
+    111 -> single $ Length len $ Toms Blue
+    112 -> single $ Length len $ Toms Green
+    116 -> single $ Length len Overdrive
+    120 -> single $ Length len Activation
+    121 -> return Nothing
+    122 -> return Nothing
+    123 -> return Nothing
+    124 -> return Nothing
+    126 -> single $ Length len SingleRoll
+    127 -> single $ Length len DoubleRoll
+    _ -> case readAnimation p of
+      Just anim -> single $ Point $ Animation anim
+      Nothing -> unrecognized n
+  Point (E.MetaEvent txt@(M.TextEvent str)) -> case str of
+    (readMix -> Just p) -> single $ Point p
+    (readMood -> Just m) -> single $ Point $ Mood m
+    "[ride_side_true]" -> single $ Point $ Animation $ RideSide True
+    "[ride_side_false]" -> single $ Point $ Animation $ RideSide False
+    _ -> unrecognized txt
+  Point p -> unrecognized p
+  where single = return . Just
 
 -- | Tries to interpret a string as an audio mix event.
 readMix :: String -> Maybe Point
@@ -172,14 +176,14 @@ readMix str
   | otherwise = Nothing
   -- Pattern guards: they're pretty cool
 
-uninterpret :: Uninterpreter (T Beats) (MIDI.T Beats)
-uninterpret (Point p) = case p of
-  Animation anim -> uninterpretAnimation anim
-  Mood m -> (:[]) $ Point . E.MetaEvent . M.TextEvent $ showMood m
+unparse :: T Beats -> [MIDI.T Beats]
+unparse (Point p) = case p of
+  Animation anim -> [showAnimation anim]
+  Mood m -> [Point . E.MetaEvent . M.TextEvent $ showMood m]
   DiffEvent diff ev -> (:[]) $ case ev of
     Mix aud dsc -> Point . E.MetaEvent . M.TextEvent $ showMix diff aud dsc
     Note drm -> blip $ V.toPitch $ (fromEnum diff + 5) * 12 + fromEnum drm
-uninterpret (Length len d) = map dlen $ case d of
+unparse (Length len d) = map dlen $ case d of
   HihatOpen -> [25]
   Toms drm -> [108 + fromEnum drm]
   Solo -> [103]
@@ -191,8 +195,8 @@ uninterpret (Length len d) = map dlen $ case d of
   DoubleRoll -> [127]
   where dlen = Length len . standardNote . V.toPitch
 
-uninterpretAnimation :: Uninterpreter Animation (MIDI.T Beats)
-uninterpretAnimation anim = (:[]) $ case anim of
+showAnimation :: Animation -> MIDI.T Beats
+showAnimation anim = case anim of
   KickRF -> blip' 24
   -- HihatOpen (25) is not an Animation
   Snare HardHit LH -> blip' 26

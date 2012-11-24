@@ -6,7 +6,7 @@ packages.
 module Main where
 
 import Data.Rhythm.Event
-import Data.Rhythm.Interpret
+import Data.Rhythm.Parser
 import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.RockBand.Common
 import qualified Data.Rhythm.RockBand.Lex.ProGuitar as PG
@@ -83,13 +83,12 @@ pgToMIDI c d = toMIDI . fmap (MPA.GtrEvent c) . play . getDiffEvents d
 data Instrument = Guitar | Bass
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-getPG :: (NN.C t) =>
+getPG :: (NN.C t, Num t, Show t) =>
   MPA.GtrController -> Instrument -> MIDI.File t Bool -> RTB.T t (PG.T t)
 getPG c i mid = go $ fromMaybe (error "MIDI track not found") $ case c of
   MPA.Squier  -> MIDI.getTrack name22 mid <|> MIDI.getTrack name17 mid
   MPA.Mustang -> MIDI.getTrack name17 mid
-  where go t = fst3 $ interpretRTB PG.interpret $ unifyEvents t
-        fst3 (x, _, _) = x
+  where go t = RTB.catMaybes $ fst $ parseEvents PG.parse $ unifyEvents t
         name17 = "PART REAL_" ++ map toUpper (show i)
         name22 = name17 ++ "_22"
 

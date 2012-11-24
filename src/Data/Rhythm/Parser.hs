@@ -25,6 +25,9 @@ data Message = Message
   , messageContext :: [String]
   } deriving (Eq, Ord, Show, Read)
 
+addContext :: String -> Message -> Message
+addContext str msg = msg { messageContext = str : messageContext msg }
+
 newtype Parser a b = Parser { runParser :: a -> ([Message], Either Message b) }
   deriving (Functor)
 
@@ -50,10 +53,9 @@ instance Arrow Parser where
 
 context :: String -> Parser a b -> Parser a b
 context ctxt p = Parser $ \x -> case runParser p x of
-  (warns, result) -> (map addContext warns, case result of
-    Left e -> Left $ addContext e
+  (warns, result) -> (map (addContext ctxt) warns, case result of
+    Left e -> Left $ addContext ctxt e
     Right _ -> result)
-  where addContext msg = msg { messageContext = ctxt : messageContext msg }
 
 inside :: a -> Parser a b -> Parser c b
 inside x p = Parser $ \_ -> runParser p x
@@ -61,18 +63,17 @@ inside x p = Parser $ \_ -> runParser p x
 warn :: String -> Parser a ()
 warn str = Parser $ \_ -> ([Message str []], Right ())
 
-error :: String -> Parser a b
-error str = Parser $ \_ -> ([], Left $ Message str [])
-
-parseEvents
-  :: (Show t, NN.C t, Num t) => Parser a b -> Parser (RTB.T t a) (RTB.T t b)
-parseEvents p = Parser $ \evts -> let
-  go = (\(t, x) -> runParser (context (show t) p) x) <$> attachAbsoluteTime evts
-  attachAbsoluteTime :: (Num t, NN.C t) => RTB.T t a -> RTB.T t (t, a)
-  attachAbsoluteTime rtb = RTB.zipWithBody (,)
-    (ATB.getTimes $ RTB.toAbsoluteEventList NN.zero rtb) rtb
-  msgs = [msg | (warns, r) <- RTB.getBodies go, msg <- warns ++ leftToList r]
-  result = RTB.mapMaybe (eitherToMaybe . snd) go
+parseEvents :: (Show t, NN.C t, Num t) =>
+  Parser a b -> RTB.T t a -> (RTB.T t b, [Message])
+parseEvents p evts = let
+  results = fmap (runParser p) evts
+  success = RTB.mapMaybe (\(_, e) -> eitherToMaybe e) results
+  msgs = RTB.flatten $ fmap (\(warns, l) -> warns ++ leftToList l) results
+  msgList = map (\(t, msg) -> addContext (show t) msg) $ ATB.toPairList $
+    RTB.toAbsoluteEventList NN.zero msgs
   eitherToMaybe = either (const Nothing) Just
   leftToList = either (:[]) (const [])
-  in (msgs, Right result)
+  in (success, msgList)
+
+unrecognized :: (Show c) => c -> Parser a b
+unrecognized x = fail $ "Unrecognized: " ++ show x

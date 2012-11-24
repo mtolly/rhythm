@@ -8,7 +8,8 @@ import Data.Rhythm.Event
 import Data.List (stripPrefix)
 import qualified Data.Rhythm.MIDI as MIDI
 import Control.Applicative ((<$>))
-import Data.Rhythm.Interpret
+import Data.Rhythm.Parser
+import Control.Arrow
 import Data.Rhythm.Guitar
 import qualified Sound.MIDI.File.Event as E
 import qualified Sound.MIDI.File.Event.Meta as M
@@ -74,36 +75,38 @@ data StrumMap
   | SlapBass
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-interpret :: Interpreter (MIDI.T a) (T a)
-interpret (Length b (MIDI.Note _ p _)) = case V.fromPitch p of
-  i | 40 <= i && i <= 59 -> single $ Length b $ AtFret $ fromIntegral $ i - 40
-  i | let (oct, k) = quotRem i 12
-    , 5 <= oct && oct <= 8
-    , 0 <= k && k <= 6
-    , let diff = toEnum $ oct - 5
-          evt = case k of
-            5 -> ForceHOPO
-            6 -> ForceStrum
-            _ -> Note $ toEnum k
-    -> single $ Length b $ DiffEvent diff evt
-  103 -> single $ Length b Solo
-  105 -> single $ Length b Player1
-  106 -> single $ Length b Player2
-  116 -> single $ Length b Overdrive
-  120 -> single $ Length b BRE
-  121 -> return []
-  122 -> return []
-  123 -> return []
-  124 -> return []
-  126 -> single $ Length b Tremolo
-  127 -> single $ Length b Trill
-  _ -> none
-interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
-  (readMood -> Just m) -> single $ Point $ Mood m
-  (readHandMap -> Just hm) -> single $ Point $ HandMap hm
-  (readStrumMap -> Just sm) -> single $ Point $ StrumMap sm
-  _ -> none
-interpret _ = none
+parse :: Parser (MIDI.T a) (Maybe (T a))
+parse = returnA >>= \x -> case x of
+  Length b n@(MIDI.Note _ p _) -> case V.fromPitch p of
+    i | 40 <= i && i <= 59 -> single $ Length b $ AtFret $ fromIntegral $ i - 40
+    i | let (oct, k) = quotRem i 12
+      , 5 <= oct && oct <= 8
+      , 0 <= k && k <= 6
+      , let diff = toEnum $ oct - 5
+            evt = case k of
+              5 -> ForceHOPO
+              6 -> ForceStrum
+              _ -> Note $ toEnum k
+      -> single $ Length b $ DiffEvent diff evt
+    103 -> single $ Length b Solo
+    105 -> single $ Length b Player1
+    106 -> single $ Length b Player2
+    116 -> single $ Length b Overdrive
+    120 -> single $ Length b BRE
+    121 -> return Nothing
+    122 -> return Nothing
+    123 -> return Nothing
+    124 -> return Nothing
+    126 -> single $ Length b Tremolo
+    127 -> single $ Length b Trill
+    _ -> unrecognized n
+  Point (E.MetaEvent txt@(M.TextEvent str)) -> case str of
+    (readMood -> Just m) -> single $ Point $ Mood m
+    (readHandMap -> Just hm) -> single $ Point $ HandMap hm
+    (readStrumMap -> Just sm) -> single $ Point $ StrumMap sm
+    _ -> unrecognized txt
+  Point p -> unrecognized p
+  where single = return . Just
 
 readHandMap :: String -> Maybe HandMap
 readHandMap = stripPrefix "[map HandMap_" >=> \str -> case str of
@@ -143,12 +146,12 @@ showStrumMap StrumDefault = "[map StrumMap_Default]"
 showStrumMap Pick = "[map StrumMap_Pick]"
 showStrumMap SlapBass = "[map StrumMap_SlapBass]"
 
-uninterpret :: Uninterpreter (T a) (MIDI.T a)
-uninterpret (Point p) = (:[]) . Point . E.MetaEvent . M.TextEvent $ case p of
+unparse :: T a -> [MIDI.T a]
+unparse (Point p) = (:[]) . Point . E.MetaEvent . M.TextEvent $ case p of
   Mood m -> showMood m
   HandMap hm -> showHandMap hm
   StrumMap sm -> showStrumMap sm
-uninterpret (Length len l) = Length len . standardNote . V.toPitch <$>
+unparse (Length len l) = Length len . standardNote . V.toPitch <$>
   case l of
     Solo -> [103]
     Tremolo -> [126]

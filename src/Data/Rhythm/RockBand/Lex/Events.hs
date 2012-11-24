@@ -8,8 +8,9 @@ import qualified Sound.MIDI.File.Event as E
 import qualified Sound.MIDI.File.Event.Meta as M
 import Data.List (stripPrefix)
 import Data.Rhythm.Event
-import Data.Rhythm.Interpret
 import Data.Rhythm.RockBand.Common
+import Control.Arrow
+import Data.Rhythm.Parser
 
 data T
   = MusicStart
@@ -17,8 +18,7 @@ data T
   | End
   | Coda
   | Crowd Crowd
-  -- | The string is something like \"verse_1\" or \"gtr_solo_2a\".
-  | Practice String
+  | Practice String -- ^ string is something like \"verse_1\" or \"gtr_solo_2a\"
   deriving (Eq, Ord, Show, Read)
 
 data Crowd
@@ -29,16 +29,17 @@ data Crowd
   | Clap Bool
   deriving (Eq, Ord, Show, Read)
 
-interpret :: Interpreter (MIDI.T a) T
-interpret (Point (E.MetaEvent (M.TextEvent str))) = case str of
-  (readCrowd -> Just c) -> single $ Crowd c
-  (readPractice -> Just sec) -> single $ Practice sec
-  "[music_start]" -> single MusicStart
-  "[music_end]"   -> single MusicEnd
-  "[end]"         -> single End
-  "[coda]"        -> single Coda
-  _               -> none
-interpret _ = none
+parse :: (Show a) => Parser (MIDI.T a) T
+parse = returnA >>= \x -> case x of
+  Point (E.MetaEvent (M.TextEvent str)) -> case str of
+    (readCrowd -> Just c) -> return $ Crowd c
+    (readPractice -> Just sec) -> return $ Practice sec
+    "[music_start]" -> return MusicStart
+    "[music_end]"   -> return MusicEnd
+    "[end]"         -> return End
+    "[coda]"        -> return Coda
+    _               -> unrecognized x
+  _ -> unrecognized x
 
 readCrowd :: String -> Maybe Crowd
 readCrowd = stripPrefix "[crowd_" >=> \rest -> case rest of

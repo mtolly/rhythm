@@ -25,7 +25,6 @@ Library
   Exposed-modules:  Data.Rhythm.Time
                     Data.Rhythm.TimeSignature
                     Data.Rhythm.Event
-                    Data.Rhythm.Interpret
                     Data.Rhythm.Status
                     Data.Rhythm.Guitar
                     Data.Rhythm.EventList

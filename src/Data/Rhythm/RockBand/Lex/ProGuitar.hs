@@ -11,13 +11,14 @@ import qualified Sound.MIDI.Message.Channel.Voice as V
 import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.Time
 import Data.Rhythm.Event
-import Data.Rhythm.Interpret
+import Data.Rhythm.Parser
 import qualified Numeric.NonNegative.Class as NN
 import Data.Char (isSpace)
 import Data.List (stripPrefix, sort)
 import Data.Maybe (listToMaybe)
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Rhythm.Guitar
+import Control.Arrow
 
 instance Long Length where
   match (DiffEvent d0 (Slide _)) (DiffEvent d1 (Slide _)) = d0 == d1
@@ -74,66 +75,68 @@ data SlideType = NormalSlide | ReversedSlide
 data StrumArea = High | Mid | Low
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-interpret :: (NN.C a) => Interpreter (MIDI.T a) (T a)
-interpret (Length len (MIDI.Note ch p vel)) = case V.fromPitch p of
-  i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
-  16 -> single $ Length len SlashChords
-  17 -> single $ Length len NoChordNames
-  18 -> single $ Length len BlackChordSwitch
-  i | let (oct, k) = quotRem i 12
-    , elem oct [2,4,6,8]
-    , let makeDiff = single . Length len . DiffEvent (toEnum $ quot oct 2 - 1)
-    -> case k of
-      6 -> makeDiff ForceHOPO
-      7 -> case C.fromChannel ch of
-        0   -> makeDiff $ Slide NormalSlide
-        11  -> makeDiff $ Slide ReversedSlide
-        ch' -> warn w >> makeDiff (Slide NormalSlide) where
-          w = "Slide marker (pitch " ++ show i ++
-            ") has unknown channel " ++ show ch'
-      8 -> makeDiff Arpeggio
-      9 -> case C.fromChannel ch of
-        13 -> makeDiff $ PartialChord High
-        14 -> makeDiff $ PartialChord Mid
-        15 -> makeDiff $ PartialChord Low
-        ch'  -> warn w >> makeDiff (PartialChord Mid) where
-          w = "Partial chord marker (pitch " ++ show i ++
-            ") has unknown channel " ++ show ch'
-      10 -> makeDiff $ UnknownBFlat ch vel
-      11 -> makeDiff AllFrets
-      _ -> makeDiff $ Note nstr nfret ntyp where
-        nstr = toEnum k
-        nfret = fromIntegral $ V.fromVelocity vel - 100
-        ntyp = toEnum $ C.fromChannel ch
-  108 -> single $ Point $ HandPosition $ fromIntegral $ V.fromVelocity vel - 100
-  115 -> single $ Length len Solo
-  116 -> single $ Length len Overdrive
-  120 -> single $ Length len BRE
-  121 -> return []
-  122 -> return []
-  123 -> return []
-  124 -> return []
-  125 -> return []
-  126 -> single $ Length len Tremolo
-  127 -> single $ Length len Trill
-  _ -> none
-interpret (Point (E.MetaEvent (M.TextEvent str))) = case readTrainer str of
-  Just (t, "pg") -> single $ Point $ TrainerGtr t
-  Just (t, "pb") -> single $ Point $ TrainerBass t
-  _ -> case readChordName str of
-    Nothing -> none
-    Just (diff, name) -> single $ Point $ ChordName diff name
-interpret _ = none
+parse :: (NN.C a) => Parser (MIDI.T a) (Maybe (T a))
+parse = returnA >>= \x -> case x of
+  Length len n@(MIDI.Note ch p vel) -> case V.fromPitch p of
+    i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
+    16 -> single $ Length len SlashChords
+    17 -> single $ Length len NoChordNames
+    18 -> single $ Length len BlackChordSwitch
+    i | let (oct, k) = quotRem i 12
+      , elem oct [2,4,6,8]
+      , let makeDiff = single . Length len . DiffEvent (toEnum $ quot oct 2 - 1)
+      -> case k of
+        6 -> makeDiff ForceHOPO
+        7 -> case C.fromChannel ch of
+          0   -> makeDiff $ Slide NormalSlide
+          11  -> makeDiff $ Slide ReversedSlide
+          ch' -> warn w >> makeDiff (Slide NormalSlide) where
+            w = "Slide marker (pitch " ++ show i ++
+              ") has unknown channel " ++ show ch'
+        8 -> makeDiff Arpeggio
+        9 -> case C.fromChannel ch of
+          13 -> makeDiff $ PartialChord High
+          14 -> makeDiff $ PartialChord Mid
+          15 -> makeDiff $ PartialChord Low
+          ch'  -> warn w >> makeDiff (PartialChord Mid) where
+            w = "Partial chord marker (pitch " ++ show i ++
+              ") has unknown channel " ++ show ch'
+        10 -> makeDiff $ UnknownBFlat ch vel
+        11 -> makeDiff AllFrets
+        _ -> makeDiff $ Note nstr nfret ntyp where
+          nstr = toEnum k
+          nfret = fromIntegral $ V.fromVelocity vel - 100
+          ntyp = toEnum $ C.fromChannel ch
+    108 -> single $ Point $ HandPosition $ fromIntegral $ V.fromVelocity vel - 100
+    115 -> single $ Length len Solo
+    116 -> single $ Length len Overdrive
+    120 -> single $ Length len BRE
+    121 -> return Nothing
+    122 -> return Nothing
+    123 -> return Nothing
+    124 -> return Nothing
+    125 -> return Nothing
+    126 -> single $ Length len Tremolo
+    127 -> single $ Length len Trill
+    _ -> unrecognized n
+  Point (E.MetaEvent txt@(M.TextEvent str)) -> case readTrainer str of
+    Just (t, "pg") -> single $ Point $ TrainerGtr t
+    Just (t, "pb") -> single $ Point $ TrainerBass t
+    _ -> case readChordName str of
+      Nothing -> unrecognized txt
+      Just (diff, name) -> single $ Point $ ChordName diff name
+  Point p -> unrecognized p
+  where single = return . Just
 
-uninterpret :: Uninterpreter (T Beats) (MIDI.T Beats)
-uninterpret (Point x) = case x of
+unparse :: T Beats -> [MIDI.T Beats]
+unparse (Point x) = case x of
   TrainerGtr t -> [text $ showTrainer t "pg"]
   TrainerBass t -> [text $ showTrainer t "pb"]
   HandPosition f -> [blip $ V.toPitch $ fromIntegral f + 100]
   ChordRoot p -> [blip p]
   ChordName diff str -> [text $ showChordName diff str]
   where text = Point . E.MetaEvent . M.TextEvent
-uninterpret (Length len x) = case x of
+unparse (Length len x) = case x of
   SlashChords -> [note 16]
   NoChordNames -> [note 17]
   BlackChordSwitch -> [note 18]
