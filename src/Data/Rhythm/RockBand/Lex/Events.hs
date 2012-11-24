@@ -9,7 +9,6 @@ import qualified Sound.MIDI.File.Event.Meta as M
 import Data.List (stripPrefix)
 import Data.Rhythm.Event
 import Data.Rhythm.RockBand.Common
-import Control.Arrow
 import Data.Rhythm.Parser
 
 data T
@@ -30,7 +29,7 @@ data Crowd
   deriving (Eq, Ord, Show, Read)
 
 parse :: (Show a) => Parser (MIDI.T a) T
-parse = returnA >>= \x -> case x of
+parse = get >>= \x -> case x of
   Point (E.MetaEvent (M.TextEvent str)) -> case str of
     (readCrowd -> Just c) -> return $ Crowd c
     (readPractice -> Just sec) -> return $ Practice sec

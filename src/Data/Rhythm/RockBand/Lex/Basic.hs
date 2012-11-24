@@ -9,7 +9,6 @@ import Data.List (stripPrefix)
 import qualified Data.Rhythm.MIDI as MIDI
 import Control.Applicative ((<$>))
 import Data.Rhythm.Parser
-import Control.Arrow
 import Data.Rhythm.Guitar
 import qualified Sound.MIDI.File.Event as E
 import qualified Sound.MIDI.File.Event.Meta as M
@@ -76,7 +75,7 @@ data StrumMap
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 parse :: Parser (MIDI.T a) (Maybe (T a))
-parse = returnA >>= \x -> case x of
+parse = get >>= \x -> case x of
   Length b n@(MIDI.Note _ p _) -> case V.fromPitch p of
     i | 40 <= i && i <= 59 -> single $ Length b $ AtFret $ fromIntegral $ i - 40
     i | let (oct, k) = quotRem i 12

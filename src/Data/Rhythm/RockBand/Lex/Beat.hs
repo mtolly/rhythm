@@ -8,7 +8,6 @@ import Data.Rhythm.Time
 import Data.Rhythm.RockBand.Common
 import qualified Numeric.NonNegative.Class as NN
 import Data.Rhythm.Parser
-import Control.Arrow
 
 data T
   = Bar -- ^ A thick barline; the beginning of a new measure.
@@ -16,7 +15,7 @@ data T
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 parse :: (NN.C a) => Parser (MIDI.T a) T
-parse = returnA >>= \x -> case x of
+parse = get >>= \x -> case x of
   Length _ n@(MIDI.Note _ p _) -> case V.fromPitch p of
     12 -> return Bar
     13 -> return Beat

@@ -11,7 +11,6 @@ import Data.Rhythm.Event
 import Data.Rhythm.Time
 import qualified Numeric.NonNegative.Class as NN
 import Data.Rhythm.Parser
-import Control.Arrow
 
 instance Long Length
 type T = Event Length Point
@@ -40,7 +39,7 @@ data LaneRange = C | D | E | F | G | A
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 parse :: (NN.C a) => Parser (MIDI.T a) (T a)
-parse = returnA >>= \x -> case x of
+parse = get >>= \x -> case x of
   Length len n@(MIDI.Note _ p _) -> case V.fromPitch p of
     0 -> return $ Point $ LaneShift C
     2 -> return $ Point $ LaneShift D

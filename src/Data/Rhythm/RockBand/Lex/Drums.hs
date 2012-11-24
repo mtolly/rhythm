@@ -10,7 +10,6 @@ import qualified Data.Rhythm.MIDI as MIDI
 import Data.Rhythm.Time
 import Data.Rhythm.Event
 import Data.Rhythm.Parser
-import Control.Arrow
 import Data.List (stripPrefix)
 import qualified Numeric.NonNegative.Class as NN
 
@@ -123,7 +122,7 @@ readAnimation p = case V.fromPitch p of
   _  -> Nothing
 
 parse :: (NN.C a) => Parser (MIDI.T a) (Maybe (T a))
-parse = returnA >>= \x -> case x of
+parse = get >>= \x -> case x of
   Length len n@(MIDI.Note _ p _) -> case V.fromPitch p of
     25 -> single $ Length len HihatOpen
     -- Notes

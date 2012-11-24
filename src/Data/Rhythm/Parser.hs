@@ -51,6 +51,20 @@ instance Arrow Parser where
   arr f = Parser $ \x -> ([], Right $ f x)
   first p = Parser $ \(x, q) -> runParser (fmap (\y -> (y, q)) p) x
 
+instance Alternative (Parser a) where
+  empty = fail "Parse failed"
+  p <|> q = Parser $ \x -> case runParser p x of
+    (msgs, Left _) -> case runParser q x of
+      (msgs', res) -> (msgs ++ msgs', res)
+    r@(_, Right _) -> r
+
+instance MonadPlus (Parser a) where
+  mzero = empty
+  mplus = (<|>)
+
+get :: Parser a a
+get = returnA
+
 context :: String -> Parser a b -> Parser a b
 context ctxt p = Parser $ \x -> case runParser p x of
   (warns, result) -> (map (addContext ctxt) warns, case result of
@@ -74,6 +88,11 @@ parseEvents p evts = let
   eitherToMaybe = either (const Nothing) Just
   leftToList = either (:[]) (const [])
   in (success, msgList)
+
+parseEvents' :: (Show t, NN.C t, Num t) =>
+  Parser a b -> Parser (RTB.T t a) (RTB.T t b)
+parseEvents' p = Parser $ \x -> case parseEvents p x of
+  (y, msgs) -> (msgs, Right y)
 
 unrecognized :: (Show c) => c -> Parser a b
 unrecognized x = fail $ "Unrecognized: " ++ show x

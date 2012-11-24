@@ -18,7 +18,6 @@ import Data.List (stripPrefix, sort)
 import Data.Maybe (listToMaybe)
 import qualified Data.EventList.Relative.TimeBody as RTB
 import Data.Rhythm.Guitar
-import Control.Arrow
 
 instance Long Length where
   match (DiffEvent d0 (Slide _)) (DiffEvent d1 (Slide _)) = d0 == d1
@@ -76,7 +75,7 @@ data StrumArea = High | Mid | Low
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 parse :: (NN.C a) => Parser (MIDI.T a) (Maybe (T a))
-parse = returnA >>= \x -> case x of
+parse = get >>= \x -> case x of
   Length len n@(MIDI.Note ch p vel) -> case V.fromPitch p of
     i | 4 <= i && i <= 15 -> single $ Point $ ChordRoot p
     16 -> single $ Length len SlashChords

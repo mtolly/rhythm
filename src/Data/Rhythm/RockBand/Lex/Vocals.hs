@@ -13,7 +13,6 @@ import qualified Numeric.NonNegative.Class as NN
 import Data.Char (toLower)
 import qualified Sound.MIDI.File.Event as E
 import qualified Sound.MIDI.File.Event.Meta as M
-import Control.Arrow
 
 data Point
   = LyricShift
@@ -49,7 +48,7 @@ data PercussionType
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 parse :: (NN.C a) => Parser (MIDI.T a) (T a)
-parse = returnA >>= \x -> case x of
+parse = get >>= \x -> case x of
   Length len n@(MIDI.Note _ p _) -> case V.fromPitch p of
     0 -> return $ Length len RangeShift
     1 -> return $ Point LyricShift
