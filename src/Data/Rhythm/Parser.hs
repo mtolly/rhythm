@@ -10,16 +10,16 @@ import qualified Data.EventList.Absolute.TimeBody as ATB
 import qualified Numeric.NonNegative.Class as NN
 
 -- Things we might want to "parse" a datatype from:
--- * An event list
--- * A MIDI file, or similar list of event lists
--- * An XML file
--- * A DTA/DTB file
+--   An event list
+--   A MIDI file, or similar list of event lists
+--   An XML file
+--   A DTA/DTB file
 -- Common theme: a tree-like type. Parse warnings need to be tagged with a
 -- string denoting their context inside the tree, and contexts nest inside of
 -- each other.
 
 -- | This can represent an error (required input was not found) or a warning
--- (given input was not recognized).
+-- (given input was not completely recognized).
 data Message = Message
   { messageString :: String
   , messageContext :: [String]
