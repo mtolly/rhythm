@@ -78,12 +78,10 @@ readTrainer str = readBegin <|> readNorm <|> readEnd where
 -- | The String parameter is the instrument-specific part: @pg@, @pb@, @key@.
 showTrainer :: Trainer -> String -> String
 showTrainer tr inst = case tr of
-  TrainerBegin n ->
-    "[begin_" ++ inst ++ " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
-  TrainerEnd n ->
-    "[end_" ++ inst ++ " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
-  TrainerNorm n ->
-    "[" ++ inst ++ "_norm song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
+  TrainerBegin n -> "[begin_" ++ inst ++ rest n
+  TrainerEnd n -> "[end_" ++ inst ++ rest n
+  TrainerNorm n -> "[" ++ inst ++ "_norm" ++ rest n
+  where rest n = " song_trainer_" ++ inst ++ "_" ++ show n ++ "]"
 
 -- | Creates a note on channel 0, with a velocity of 96.
 standardNote :: V.Pitch -> MIDI.Note
