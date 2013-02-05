@@ -32,7 +32,7 @@ newtype Parser a b = Parser { runParser :: a -> ([Message], Either Message b) }
   deriving (Functor)
 
 instance Applicative (Parser a) where
-  pure x = Parser $ \_ -> ([], Right x)
+  pure x = Parser $ const ([], Right x)
   (<*>) = ap
 
 instance Monad (Parser a) where
@@ -41,7 +41,7 @@ instance Monad (Parser a) where
     (warns, Left e) -> (warns, Left e)
     (warns, Right y) -> case runParser (f y) x of
       (warns', result) -> (warns ++ warns', result)
-  fail str = Parser $ \_ -> ([], Left $ Message str [])
+  fail str = Parser $ const ([], Left $ Message str [])
 
 instance Cat.Category Parser where
   id = returnA
@@ -72,10 +72,10 @@ context ctxt p = Parser $ \x -> case runParser p x of
     Right _ -> result)
 
 inside :: a -> Parser a b -> Parser c b
-inside x p = Parser $ \_ -> runParser p x
+inside x p = Parser $ const $ runParser p x
 
 warn :: String -> Parser a ()
-warn str = Parser $ \_ -> ([Message str []], Right ())
+warn str = Parser $ const ([Message str []], Right ())
 
 parseEvents :: (Show t, NN.C t, Num t) =>
   Parser a b -> RTB.T t a -> (RTB.T t b, [Message])

@@ -65,10 +65,10 @@ getBeatPosn sigs (MeasurePosn m b) =
   b + sum (I.take (fromIntegral m) (measureLengths sigs))
 
 naturalSignature :: Beats -> TimeSignature
-naturalSignature (Beats bts) = case NN.toNumber bts of
-  rat ->
-    TimeSignature (NN.fromNumberUnsafe n) (Beats $ NN.fromNumberUnsafe $ 1 % d)
-    where (n, d) = (numerator rat, denominator rat)
+naturalSignature (Beats bts) = let
+  rat = NN.toNumber bts
+  (n, d) = (numerator rat, denominator rat)
+  in TimeSignature (NN.fromNumberUnsafe n) (Beats $ NN.fromNumberUnsafe $ 1 % d)
 
 -- | A time signature in the middle of a measure ends it.
 validSignatures :: Status.T Beats TimeSignature -> SignatureTrack

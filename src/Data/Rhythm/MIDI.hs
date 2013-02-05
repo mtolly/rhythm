@@ -102,11 +102,11 @@ getSignature (Point (E.MetaEvent (M.TimeSig n d _ _))) =
 getSignature _ = Nothing
 
 readFile :: F.T -> Maybe (File Ticks Bool)
-readFile (F.Cons F.Parallel (F.Ticks res) trks) = Just $
-  case map (fmap readEvent . RTB.mapTime Ticks) trks of
+readFile (F.Cons F.Parallel (F.Ticks res) trks) = Just $ let
+  res' = fromIntegral res
+  in case map (fmap readEvent . RTB.mapTime Ticks) trks of
     [] -> File res' RTB.empty []
-    meta : rest -> File res' meta $ map extractName rest where
-    where res' = fromIntegral res
+    meta : rest -> File res' meta $ map extractName rest
 readFile _ = Nothing
 
 -- | Encodes a tempo as a MIDI event.
@@ -134,11 +134,12 @@ makeSignature (TimeSignature mult (Beats unit)) = isPowerOf2 (NN.toNumber unit)
 
 makeTimeTrack :: (Ord a) => Status.T Beats BPM -> SignatureTrack ->
   Either TimeSignature (RTB.T Beats (T a))
-makeTimeTrack bpms sigs = case RTB.partitionMaybe makeSignature $
-  Status.toRTB' $ renderSignatures $ sigs of
-    (good, bad) -> case RTB.viewL bad of
-      Nothing -> Right $ RTB.merge good $ fmap makeTempo $ Status.toRTB' bpms
-      Just ((_, badSig), _) -> Left badSig
+makeTimeTrack bpms sigs = let
+  (good, bad) =
+    RTB.partitionMaybe makeSignature $ Status.toRTB' $ renderSignatures sigs
+  in case RTB.viewL bad of
+    Nothing -> Right $ RTB.merge good $ fmap makeTempo $ Status.toRTB' bpms
+    Just ((_, badSig), _) -> Left badSig
 
 showFile :: File Ticks Bool -> F.T
 showFile f = F.Cons F.Parallel (F.Ticks $ fromIntegral $ resolution f) $
