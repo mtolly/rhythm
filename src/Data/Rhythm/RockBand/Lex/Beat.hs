@@ -8,6 +8,8 @@ import Data.Rhythm.Time
 import Data.Rhythm.RockBand.Common
 import qualified Numeric.NonNegative.Class as NN
 import Data.Rhythm.Parser
+import qualified Data.EventList.Relative.TimeBody as RTB
+import Data.Rhythm.TimeSignature
 
 data T
   = Bar -- ^ A thick barline; the beginning of a new measure.
@@ -24,3 +26,20 @@ parse = get >>= \x -> case x of
 
 unparse :: T -> MIDI.T Beats
 unparse b = blip $ V.toPitch $ case b of Bar -> 12; Beat -> 13
+
+-- | Given a list of signatures for each measure, produces a default BEAT track.
+-- Each time signature's unit must be at least 1/2 beat, or exactly 1/4 beat.
+-- (That is, the denominator must be no more than 8, or exactly 16.)
+beatTrack :: [TimeSignature] -> RTB.T Beats T
+beatTrack [] = RTB.empty
+beatTrack (TimeSignature 0 _ : _) = error "beatTrack: 0 multiplier in signature"
+beatTrack (TimeSignature mult unit : sigs) = if unit >= 0.5
+  then let -- Bar Beat Beat
+    addBeats = replicate (fromIntegral mult - 1) $
+      RTB.cons 0 Beat . RTB.delay unit
+    in RTB.cons 0 Bar $ RTB.delay unit $ foldr (.) id addBeats $ beatTrack sigs
+  else case unit of
+    0.25 -> if even mult
+      then undefined -- Bar () Beat () Beat ()
+      else undefined -- Bar () Beat () Beat () ()
+    _ -> error $ "beatTrack: unsupported time signature unit " ++ show unit
