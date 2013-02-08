@@ -67,3 +67,8 @@ Executable pgtonotes
                     non-negative, midi
   Main-Is:          pgtonotes.hs
   ghc-options:      -Wall
+
+Executable beatgen
+  Build-Depends:    base >= 4 && <= 5, rhythm, midi, inflist
+  Main-Is:          beatgen.hs
+  ghc-options:      -Wall
