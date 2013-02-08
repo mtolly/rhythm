@@ -35,11 +35,17 @@ beatTrack [] = RTB.empty
 beatTrack (TimeSignature 0 _ : _) = error "beatTrack: 0 multiplier in signature"
 beatTrack (TimeSignature mult unit : sigs) = if unit >= 0.5
   then let -- Bar Beat Beat
-    addBeats = replicate (fromIntegral mult - 1) $
-      RTB.cons 0 Beat . RTB.delay unit
-    in RTB.cons 0 Bar $ RTB.delay unit $ foldr (.) id addBeats $ beatTrack sigs
+    addBar = RTB.cons 0 Bar . RTB.delay unit
+    addBeat = RTB.cons 0 Beat . RTB.delay unit
+    in addBar $ foldr (.) id (replicate (fromIntegral mult - 1) addBeat) $
+      beatTrack sigs
   else case unit of
-    0.25 -> if even mult
-      then undefined -- Bar () Beat () Beat ()
-      else undefined -- Bar () Beat () Beat () ()
+    0.25 -> let
+      addBar = RTB.cons 0 Bar . RTB.delay (unit * 2)
+      addBeat = RTB.cons 0 Beat . RTB.delay (unit * 2)
+      evenBeatNum = fromIntegral $ (mult `quot` 2) - 1
+      evenBeats = addBar . foldr (.) id (replicate evenBeatNum addBeat)
+      in if even mult
+        then evenBeats $ beatTrack sigs -- Bar | Beat | Beat |
+        else evenBeats $ RTB.delay unit $ beatTrack sigs -- Bar | Bt | Bt | |
     _ -> error $ "beatTrack: unsupported time signature unit " ++ show unit
