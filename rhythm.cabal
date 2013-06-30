@@ -56,19 +56,19 @@ Source-Repository head
   Type:             git
   Location:         git://github.com/mtolly/rhythm.git
 
-Executable pgautoplay
-  Build-Depends:    base >= 4 && <= 5, rhythm, midiproadapter, event-list,
-                    non-negative, midi, transformers, containers
-  Main-Is:          pgautoplay.hs
-  ghc-options:      -Wall
+--Executable pgautoplay
+--  Build-Depends:    base >= 4 && <= 5, rhythm, midiproadapter, event-list,
+--                    non-negative, midi, transformers, containers
+--  Main-Is:          pgautoplay.hs
+--  ghc-options:      -Wall
 
-Executable pgtonotes
-  Build-Depends:    base >= 4 && <= 5, rhythm, midiproadapter, event-list,
-                    non-negative, midi
-  Main-Is:          pgtonotes.hs
-  ghc-options:      -Wall
+--Executable pgtonotes
+--  Build-Depends:    base >= 4 && <= 5, rhythm, midiproadapter, event-list,
+--                    non-negative, midi
+--  Main-Is:          pgtonotes.hs
+--  ghc-options:      -Wall
 
-Executable beatgen
-  Build-Depends:    base >= 4 && <= 5, rhythm, midi, inflist
-  Main-Is:          beatgen.hs
-  ghc-options:      -Wall
+--Executable beatgen
+--  Build-Depends:    base >= 4 && <= 5, rhythm, midi, inflist
+--  Main-Is:          beatgen.hs
+--  ghc-options:      -Wall
