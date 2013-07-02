@@ -31,7 +31,7 @@ data Length
   deriving (Eq, Ord, Show)
 
 data Point
-  = BPM BPM
+  = BPM BPS
   | Anchor Seconds
   | TimeSig NN.Integer
   | EventGlobal String
@@ -70,7 +70,7 @@ getResolution f = fmap Ticks $ getValue "Resolution" f >>= fromInt
 setResolution :: Resolution -> File t a -> File t a
 setResolution = setValue "Resolution" . Int . unTicks
 
-getTempoTrack :: (NN.C t) => File t a -> Status.T t BPM
+getTempoTrack :: (NN.C t) => File t a -> Status.T t BPS
 getTempoTrack = Status.fromRTB 120 . RTB.mapMaybe g . syncTrack where
   g (Point (BPM b)) = Just b
   g _               = Nothing

@@ -53,7 +53,7 @@ EventLines : EventLine EventLines { $1 : $2 }
 
 EventLine : int '=' Event { (Ticks $1, $3) }
 
-Event : b int { Point $ BPM $ Beats $ fromIntegral $2 / 1000 }
+Event : b int { Point $ BPM $ Beats $ fromIntegral $2 / 60000 }
       | a int { Point $ Anchor $ Seconds $ fromIntegral $2 / 1000000 }
       | ts int { Point $ TimeSig $2 }
       | e quoted { Point $ EventGlobal $2 }

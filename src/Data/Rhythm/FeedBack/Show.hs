@@ -40,7 +40,7 @@ showEventChunk name chunk = startChunk name . middle . endChunk where
       Note fret -> [Ident "N", Int fret, Int len]
       Stream strType -> [Ident "S", Int strType, Int len]
     Point p -> case p of
-      BPM (Beats bpm) -> [Ident "B", Int $ floor $ bpm * 1000]
+      BPM (Beats bps) -> [Ident "B", Int $ floor $ bps * 60000]
       Anchor (Seconds secs) -> [Ident "A", Int $ floor $ secs * 1000000]
       TimeSig i -> [Ident "TS", Int i]
       EventGlobal str -> [Ident "E", Quoted str]

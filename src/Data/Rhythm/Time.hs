@@ -22,8 +22,8 @@ type Resolution = Ticks
 -- | A time position/duration in seconds.
 newtype Seconds = Seconds { unSeconds :: NN.Rational }
   deriving (Eq, Ord, Show, Num, Real, Fractional, RealFrac, NN.C, Monoid)
--- | A tempo, in beats per minute.
-type BPM = Beats
+-- | A tempo, in beats per second.
+type BPS = Beats
 
 fromTicks :: Resolution -> Ticks -> Beats
 fromTicks (Ticks res) (Ticks tks) =
@@ -52,18 +52,18 @@ minResolution = Ticks . NN.fromNumberUnsafe .
 minTrackResolution :: RTB.T Beats a -> Resolution
 minTrackResolution = minResolution . RTB.getTimes
 
-toTime :: BPM -> Beats -> Seconds
-toTime (Beats bpm) (Beats bts) = Seconds $ (bts / bpm) * 60
+toTime :: BPS -> Beats -> Seconds
+toTime (Beats bps) (Beats bts) = Seconds $ bts / bps
 
-fromTime :: BPM -> Seconds -> Beats
-fromTime (Beats bpm) (Seconds secs) = Beats $ (secs / 60) * bpm
+fromTime :: BPS -> Seconds -> Beats
+fromTime (Beats bps) (Seconds secs) = Beats $ secs * bps
 
 -- | Uses tempos to convert an event-list from beatstamps to timestamps.
-toTimeTrack :: Status.T Beats BPM -> RTB.T Beats a -> RTB.T Seconds a
+toTimeTrack :: Status.T Beats BPS -> RTB.T Beats a -> RTB.T Seconds a
 toTimeTrack = Status.applyTime . fmap toTime
 
 -- | Uses tempos to convert an event-list from timestamps to beatstamps.
-fromTimeTrack :: Status.T Seconds BPM -> RTB.T Seconds a -> RTB.T Beats a
+fromTimeTrack :: Status.T Seconds BPS -> RTB.T Seconds a -> RTB.T Beats a
 fromTimeTrack = Status.applyTime . fmap fromTime
 
 toTickStatus :: Resolution -> Status.T Beats a -> Status.T Ticks a

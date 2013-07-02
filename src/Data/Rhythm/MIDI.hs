@@ -39,8 +39,8 @@ data Note = Note C.Channel V.Pitch V.Velocity
 instance Long Note where
   match (Note c0 p0 _) (Note c1 p1 _) = c0 == c1 && p0 == p1
 
-tempoTrack :: (NN.C t) => File t a -> Status.T t BPM
-tempoTrack = Status.fromRTB (Beats 120) . RTB.mapMaybe getTempo . trackZero
+tempoTrack :: (NN.C t) => File t a -> Status.T t BPS
+tempoTrack = Status.fromRTB (Beats 2) . RTB.mapMaybe getTempo . trackZero
 
 signatureTrack :: File Beats a -> SignatureTrack
 signatureTrack = validSignatures . Status.fromRTB (4 // 4) .
@@ -89,10 +89,10 @@ toTickFile :: File Beats a -> File Ticks a
 toTickFile m = mapTracks (toTickTrack $ resolution m) m
 
 -- | Decodes a tempo from a MIDI event.
-getTempo :: T a -> Maybe BPM
-getTempo (Point (E.MetaEvent (M.SetTempo microsecsPerBeat))) = Just beatsPerMin
-  where beatsPerMin = microsecsPerMin / fromIntegral microsecsPerBeat
-        microsecsPerMin = 60000000
+getTempo :: T a -> Maybe BPS
+getTempo (Point (E.MetaEvent (M.SetTempo microsecsPerBeat))) = Just beatsPerSec
+  where beatsPerSec = microsecsPerSec / fromIntegral microsecsPerBeat
+        microsecsPerSec = 1000000
 getTempo _ = Nothing
 
 -- | Decodes a time signature from a MIDI event.
@@ -110,10 +110,10 @@ readFile (F.Cons F.Parallel (F.Ticks res) trks) = Just $ let
 readFile _ = Nothing
 
 -- | Encodes a tempo as a MIDI event.
-makeTempo :: BPM -> T a
-makeTempo beatsPerMin = Point $ E.MetaEvent $ M.SetTempo microsecsPerBeat
-  where microsecsPerBeat = floor $ microsecsPerMin / beatsPerMin
-        microsecsPerMin = 60000000
+makeTempo :: BPS -> T a
+makeTempo beatsPerSec = Point $ E.MetaEvent $ M.SetTempo microsecsPerBeat
+  where microsecsPerBeat = floor $ microsecsPerSec / beatsPerSec
+        microsecsPerSec = 1000000
 
 -- | Encodes a time signature as a MIDI event. The denominator must be a power
 -- of 2, or Nothing will be returned.
@@ -132,13 +132,13 @@ makeSignature (TimeSignature mult (Beats unit)) = isPowerOf2 (NN.toNumber unit)
       (n', 0) -> (+1) <$> isPowerOf2' n'
       _ -> Nothing
 
-makeTimeTrack :: (Ord a) => Status.T Beats BPM -> SignatureTrack ->
+makeTimeTrack :: (Ord a) => Status.T Beats BPS -> SignatureTrack ->
   Either TimeSignature (RTB.T Beats (T a))
-makeTimeTrack bpms sigs = let
+makeTimeTrack bpss sigs = let
   (good, bad) =
     RTB.partitionMaybe makeSignature $ Status.toRTB' $ renderSignatures sigs
   in case RTB.viewL bad of
-    Nothing -> Right $ RTB.merge good $ fmap makeTempo $ Status.toRTB' bpms
+    Nothing -> Right $ RTB.merge good $ fmap makeTempo $ Status.toRTB' bpss
     Just ((_, badSig), _) -> Left badSig
 
 showFile :: File Ticks Bool -> F.T
